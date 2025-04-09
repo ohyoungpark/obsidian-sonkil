@@ -5,24 +5,19 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 ## Key Features
 
 ### Text Manipulation
+- `C-Space`: Set mark at current cursor position
 - `C-k`: Cut text from cursor position to end of line (Kill Line)
-- `C-w`: Cut selected text (Kill Region)
-- `M-w`: Copy selected text (Copy Region)
+- `C-w`: Cut text between mark and cursor (Kill Region)
+- `M-w`: Copy text between mark and cursor (Copy Region)
 
 ### Kill Ring
 - `C-y`: Paste most recent text from kill ring (Yank)
 - `M-y`: Cycle through previously cut text after yank (Yank Pop)
 - Maximum number of kill ring entries: 60
-- Maximum length of kill ring entry: 10,000 characters
 
 ### Clipboard Integration
-- Paste system clipboard content with `C-y` when kill ring is empty
-- Automatically copy cut/copied text to system clipboard
-
-### Convenience Features
-- Automatic truncation of kill ring entries exceeding 10,000 characters
-- Automatic removal of oldest entries when kill ring is full
-- Automatic deselection after text manipulation
+- When kill ring is empty, `C-y` will import content from system clipboard into kill ring
+- Cut/copied text is automatically copied to system clipboard
 
 ## Installation
 
@@ -79,30 +74,6 @@ npm run install-dev
 > **Note**:
 > - `.env` file is added to `.gitignore` to prevent committing sensitive information
 > - After installing in development mode, you need to restart Obsidian or reload the plugin for changes to take effect
-
-## Test Coverage
-
-Current test coverage:
-- Statements: 67.24%
-- Branches: 58.97%
-- Functions: 57.89%
-- Lines: 67.54%
-
-## Contributing
-
-1. Create Issues: Report bugs or suggest features
-2. Submit Pull Requests: Contribute code
-3. Improve Documentation: Enhance README or comments
-
-## License
-
-MIT License
-
-## Developer Information
-
-- Developer: Ohyoung Park
-- Email: ohyoung.park@mail.com
-- GitHub: https://github.com/ohyoungpark/obsidian-sonkil
 
 ## Translations
 

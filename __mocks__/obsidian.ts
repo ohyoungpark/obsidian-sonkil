@@ -19,16 +19,22 @@ export interface IMarkdownView {
 }
 
 export interface IApp {
-    workspace: {
-        getActiveViewOfType(type: any): IMarkdownView | null;
-    };
+    workspace: IWorkspace;
+}
+
+export interface IWorkspace {
+    getActiveViewOfType: jest.Mock;
 }
 
 // Mock object implementation
 export class App implements IApp {
-    workspace = {
-        getActiveViewOfType: () => null
-    };
+    workspace: IWorkspace;
+
+    constructor() {
+        this.workspace = {
+            getActiveViewOfType: jest.fn()
+        };
+    }
 }
 
 export class Editor implements IEditor {
@@ -64,6 +70,10 @@ export class Plugin {
     addSettingTab = jest.fn();
     loadData = jest.fn();
     saveData = jest.fn();
+
+    // Add private members for testing
+    killRing: any;
+    config: any;
 
     constructor(app: IApp, manifest: any) {
         this.app = app;

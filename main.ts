@@ -1,19 +1,29 @@
 import { App, Editor, EditorPosition, MarkdownView, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { KeyBinding, SonkilSettings, PluginManifest, ModifierKey } from './types';
+import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
+import { KillRing } from './killRing';
 
-export default class SonkilPlugin extends Plugin {
-	settings: SonkilSettings;
-	keyBindings: KeyBinding[];
+const DEFAULT_KILL_RING_SIZE = 60;
+
+export interface ConfigChangeHandler {
+	setKillRingMaxSize(size: number): Promise<void>;
+	getKillRingMaxSize(): number;
+}
+
+export default class SonkilPlugin extends Plugin implements ConfigChangeHandler {
+	protected yankPosition: EditorPosition | null;
+	protected markPosition: EditorPosition | null;
+	private keyBindings: KeyBinding[];
+	killRing: KillRing;
+	config: SonkilConfig;
 
 	constructor(app: App, manifest: PluginManifest) {
 		super(app, manifest);
-		this.settings = {
-			killRing: [],
-			killRingIndex: -1,
-			yankPosition: null,
-			markPosition: null,
-			killRingMaxSize: 60
+		this.yankPosition = null;
+		this.markPosition = null;
+		this.config = {
+			killRingMaxSize: DEFAULT_KILL_RING_SIZE
 		};
+		this.killRing = new KillRing(DEFAULT_KILL_RING_SIZE);
 
 		// Key binding definitions
 		this.keyBindings = [
@@ -30,7 +40,7 @@ export default class SonkilPlugin extends Plugin {
 				code: 'Space',
 				modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
 				action: (editor: Editor) => {
-					this.settings.markPosition = editor.getCursor();
+					this.markPosition = editor.getCursor();
 					return true;
 				},
 				description: 'Set mark',
@@ -63,7 +73,7 @@ export default class SonkilPlugin extends Plugin {
 				code: 'KeyY',
 				modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
 				action: (editor: Editor) => {
-					this.settings.yankPosition = null; // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
+					this.yankPosition = null; // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
 					this.yank(editor);
 					return true;
 				},
@@ -85,7 +95,7 @@ export default class SonkilPlugin extends Plugin {
 	}
 
 	async onload() {
-		await this.loadSettings();
+		await this.loadConfig();
 		console.log('Sonkil plugin loaded, kill ring initialized');
 
 		// Register key event listener (capture phase)
@@ -128,17 +138,6 @@ export default class SonkilPlugin extends Plugin {
 		this.addSettingTab(new SonkilSettingTab(this.app, this));
 	}
 
-	private addToKillRing(text: string) {
-		this.settings.killRing.push(text);
-
-		// Implement kill ring size limit
-		if (this.settings.killRing.length > this.settings.killRingMaxSize) {
-			this.settings.killRing = this.settings.killRing.slice(-this.settings.killRingMaxSize);
-		}
-
-		this.settings.killRingIndex = this.settings.killRing.length - 1;
-	}
-
 	private sortPositions(a: EditorPosition, b: EditorPosition): [EditorPosition, EditorPosition] {
 		return (a.line < b.line || (a.line === b.line && a.ch <= b.ch)) ? [a, b] : [b, a];
 	}
@@ -158,62 +157,57 @@ export default class SonkilPlugin extends Plugin {
 		}
 
 		// Add to killRing and delete text
-		this.addToKillRing(text);
+		this.killRing.add(text);
 		const lastCharPosition: EditorPosition = { line: cursorPosition.line, ch: line.length };
 		editor.replaceRange('', cursorPosition, lastCharPosition);
 	}
 
 	killRegion(editor: Editor) {
-		if (this.settings.markPosition) {
-			const from = this.settings.markPosition;
+		if (this.markPosition) {
+			const from = this.markPosition;
 			const to = editor.getCursor();
 
 			const [start, end] = this.sortPositions(from, to);
-
 			const text = editor.getRange(start, end);
 
-			this.addToKillRing(text);
+			this.killRing.add(text);
 			editor.replaceRange('', start, end);
-			this.settings.markPosition = null;
+			this.markPosition = null;
 		} else {
 			const selection = editor.getSelection();
 			if (selection) {
-				this.addToKillRing(selection);
+				this.killRing.add(selection);
 				editor.replaceSelection('');
 			}
 		}
 	}
 
-	private getNextKillRingIndex(): number {
-		const index = this.settings.killRingIndex - 1;
-		const length = this.settings.killRing.length;
-		return (index + length) % length;
-	}
-
 	async yank(editor: Editor) {
-		if (this.settings.killRing.length === 0) {
+		if (this.killRing.getCurrentItem() === null) {
 			const clipboardText = await navigator.clipboard.readText();
 			if (clipboardText) {
-				this.addToKillRing(clipboardText);
+				this.killRing.add(clipboardText);
 			}
 		}
 
 		const cursorPostion: EditorPosition = editor.getCursor();
 
-		if (!this.settings.yankPosition) {
-			this.settings.yankPosition = cursorPostion;
+		if (!this.yankPosition) {
+			this.yankPosition = cursorPostion;
 		} else {
-			this.settings.killRingIndex = this.getNextKillRingIndex();
+			this.killRing.decreaseCurrentIndex();
 		}
 
-		editor.setSelection(this.settings.yankPosition, cursorPostion);
-		editor.replaceSelection(this.settings.killRing[this.settings.killRingIndex]);
+		const currentItem = this.killRing.getCurrentItem();
+		if (currentItem) {
+			editor.setSelection(this.yankPosition, cursorPostion);
+			editor.replaceSelection(currentItem);
+		}
 	}
 
 	keyboardQuit(): boolean {
-		this.settings.markPosition = null;
-		this.settings.yankPosition = null;
-
+		this.markPosition = null;
+		this.yankPosition = null;
 		return true;
 	}
 
@@ -231,8 +225,8 @@ export default class SonkilPlugin extends Plugin {
 			}
 		}
 
-		if (this.settings.yankPosition && !['Control', 'Alt'].includes(evt.key)) {
-			this.settings.yankPosition = null;
+		if (this.yankPosition && !['Control', 'Alt'].includes(evt.key)) {
+			this.yankPosition = null;
 		}
 
 		return false;
@@ -254,68 +248,57 @@ export default class SonkilPlugin extends Plugin {
 	}
 
 	onunload() {
-		console.log('Sonkil plugin unloading, cleaning up kill ring');
-		this.settings.killRing = [];
-		this.settings.killRingIndex = -1;
-		this.settings.yankPosition = null;
-		this.settings.markPosition = null;
+		this.markPosition = null;
+		this.yankPosition = null;
 	}
 
-	async loadSettings() {
-		const loadedData = await this.loadData() as Partial<SonkilSettings>;
-		this.settings = {
-			killRing: [],
-			killRingIndex: -1,
-			yankPosition: null,
-			markPosition: null,
-			killRingMaxSize: 60,
-			...loadedData
-		};
-		console.log('Sonkil settings loaded:', this.settings);
+	async loadConfig() {
+		const loadedData = await this.loadData();
+		if (loadedData) {
+			this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
+		}
+		this.killRing = new KillRing(this.config.killRingMaxSize);
 	}
 
-	async saveSettings() {
-		await this.saveData(this.settings);
-		console.log('Sonkil settings saved:', this.settings);
+	async saveConfig() {
+		await this.saveData(this.config);
+	}
+
+	async setKillRingMaxSize(size: number): Promise<void> {
+		this.config.killRingMaxSize = size;
+		this.killRing.setMaxSize(size);
+		await this.saveConfig();
+	}
+
+	getKillRingMaxSize(): number {
+		return this.config.killRingMaxSize;
 	}
 }
 
 class SonkilSettingTab extends PluginSettingTab {
-	plugin: SonkilPlugin;
+	private configHandler: ConfigChangeHandler;
 
-	constructor(app: App, plugin: SonkilPlugin) {
+	constructor(app: App, plugin: Plugin & ConfigChangeHandler) {
 		super(app, plugin);
-		this.plugin = plugin;
+		this.configHandler = plugin;
 	}
 
 	display(): void {
-		const {containerEl} = this;
+		const { containerEl } = this;
 		containerEl.empty();
 
-		containerEl.createEl('h2', {text: 'Sonkil Settings'});
+		containerEl.createEl('h2', { text: 'Sonkil Settings' });
 
 		new Setting(containerEl)
-			.setName('Kill Ring Size')
-			.setDesc('Maximum number of items to keep in kill ring')
+			.setName('Kill Ring Max Size')
+			.setDesc('Maximum number of items to keep in the kill ring')
 			.addText(text => text
-				.setValue(String(this.plugin.settings.killRingMaxSize))
-				.setPlaceholder('60')
+				.setPlaceholder('Enter max size')
+				.setValue(this.configHandler.getKillRingMaxSize().toString())
 				.onChange(async (value) => {
-					const size = parseInt(value);
-					if (!isNaN(size) && size > 0) {
-						this.plugin.settings.killRingMaxSize = size;
-
-						// Remove excess items when kill ring size is reduced
-						if (this.plugin.settings.killRing.length > size) {
-							this.plugin.settings.killRing = this.plugin.settings.killRing.slice(-size);
-							this.plugin.settings.killRingIndex = Math.min(
-								this.plugin.settings.killRingIndex,
-								this.plugin.settings.killRing.length - 1
-							);
-						}
-
-						await this.plugin.saveSettings();
-						console.log(`Kill Ring Size가 ${size}로 변경되었습니다.`);
+					const newSize = parseInt(value);
+					if (!isNaN(newSize) && newSize > 0) {
+						await this.configHandler.setKillRingMaxSize(newSize);
 					}
 				}));
 	}

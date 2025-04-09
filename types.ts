@@ -19,11 +19,7 @@ export interface KeyBinding extends KeyEvent {
     isCommand: boolean;
 }
 
-export interface SonkilSettings {
-    killRing: string[];
-    killRingIndex: number;
-    yankPosition: EditorPosition | null;
-    markPosition: EditorPosition | null;
+export interface SonkilConfig {
     killRingMaxSize: number;
 }
 

@@ -1,15 +1,61 @@
 import { App, Editor, MarkdownView, IEditor, IMarkdownView, IApp } from './__mocks__/obsidian';
 import SonkilPlugin from './main';
+import { ClipboardInterface } from './killRing';
+import { TestKillRing } from './killRing.test';
+import { EditorPosition } from 'obsidian';
+
+// Mock clipboard implementation
+class MockClipboard implements ClipboardInterface {
+    private text: string = '';
+
+    async writeText(text: string): Promise<void> {
+        this.text = text;
+        return Promise.resolve();
+    }
+
+    async readText(): Promise<string> {
+        return Promise.resolve(this.text);
+    }
+
+    // Clipboard 인터페이스 구현
+    read = jest.fn();
+    write = jest.fn();
+    addEventListener = jest.fn();
+    dispatchEvent = jest.fn();
+    removeEventListener = jest.fn();
+}
+
+class TestSonkilPlugin extends SonkilPlugin {
+    getMarkPosition(): EditorPosition | null {
+        return this.markPosition;
+    }
+
+    getYankPosition(): EditorPosition | null {
+        return this.yankPosition;
+    }
+
+    setYankPosition(position: EditorPosition | null): void {
+        this.yankPosition = position;
+    }
+
+    setMarkPosition(position: EditorPosition | null): void {
+        this.markPosition = position;
+    }
+
+    killRing: TestKillRing;
+}
 
 describe('SonkilPlugin', () => {
     let app: IApp;
-    let plugin: SonkilPlugin;
+    let plugin: TestSonkilPlugin;
     let editor: IEditor;
     let view: IMarkdownView;
+    let mockClipboard: MockClipboard;
 
     beforeEach(() => {
         app = new App();
-        plugin = new SonkilPlugin(app as any, {
+        mockClipboard = new MockClipboard();
+        plugin = new TestSonkilPlugin(app as any, {
             id: 'test',
             name: 'Test Plugin',
             version: '1.0.0',
@@ -17,6 +63,8 @@ describe('SonkilPlugin', () => {
             author: 'Test Author',
             description: 'Test Description'
         });
+        plugin.killRing = new TestKillRing(60, mockClipboard);
+
         editor = new Editor();
         view = new MarkdownView();
         view.editor = editor;
@@ -25,48 +73,43 @@ describe('SonkilPlugin', () => {
         editor.getLine = jest.fn().mockReturnValue('test line');
         editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 0 });
         editor.lineCount = jest.fn().mockReturnValue(2);
+        editor.setSelection = jest.fn();
+        editor.replaceSelection = jest.fn();
+        editor.replaceRange = jest.fn();
+        editor.getSelection = jest.fn().mockReturnValue('');
+
+        // Mock app.workspace.getActiveViewOfType
+        app.workspace.getActiveViewOfType = jest.fn().mockReturnValue(view);
 
         // Mock navigator.clipboard
         Object.defineProperty(navigator, 'clipboard', {
             value: {
+                writeText: jest.fn(),
                 readText: jest.fn().mockResolvedValue('clipboard text')
             },
             writable: true
         });
     });
 
-    describe('constructor', () => {
-        it('should initialize with default settings', () => {
-            // Then
-            expect(plugin.settings).toEqual({
-                killRing: [],
-                killRingIndex: -1,
-                killRingMaxSize: 60,
-                yankPosition: null,
-                markPosition: null
-            });
-        });
-    });
-
     describe('yank', () => {
         it('should enter yank mode after C-y', async () => {
             // Given
-            plugin.settings.killRing = ['test text'];
-            plugin.settings.killRingIndex = 0;
+            plugin.killRing.add('test text');
 
             // When
             await plugin.yank(editor as any);
 
             // Then
-            expect(plugin.settings.yankPosition).not.toBeNull();
+            expect(plugin.getYankPosition()).not.toBeNull();
         });
 
         it('should exit yank mode when non-M-y key is pressed', async () => {
             // Given
-            plugin.settings.yankPosition = {
+            const yankPosition = {
                 line: 0,
                 ch: 9
             };
+            plugin.setYankPosition(yankPosition);
 
             // When
             const event = new KeyboardEvent('keydown', {
@@ -74,26 +117,10 @@ describe('SonkilPlugin', () => {
                 altKey: false,
                 ctrlKey: false
             });
-
-            // Call event handler directly
-            if (plugin.settings.yankPosition) {
-                // Update according to new structure
-                const isAltY = event.altKey && plugin.isKeyBindingMatch(event, {
-                    key: 'y',
-                    code: 'KeyY',
-                    modifiers: { altKey: true, ctrlKey: false, shiftKey: false, metaKey: false },
-                    action: () => true,
-                    description: '',
-                    isCommand: true
-                });
-
-                if (!isAltY) {
-                    plugin.settings.yankPosition = null;
-                }
-            }
+            plugin.handleKeyEvent(event);
 
             // Then
-            expect(plugin.settings.yankPosition).toBeNull();
+            expect(plugin.getYankPosition()).toBeNull();
         });
 
         it('should maintain yank mode when M-y is pressed', async () => {
@@ -102,7 +129,7 @@ describe('SonkilPlugin', () => {
                 line: 0,
                 ch: 9
             };
-            plugin.settings.yankPosition = yankPosition;
+            plugin.setYankPosition(yankPosition);
 
             // When
             const event = new KeyboardEvent('keydown', {
@@ -110,139 +137,39 @@ describe('SonkilPlugin', () => {
                 altKey: true,
                 ctrlKey: false
             });
-
-            // Call event handler directly
-            if (plugin.settings.yankPosition) {
-                // Update according to new structure
-                const isAltY = event.altKey && plugin.isKeyBindingMatch(event, {
-                    key: 'y',
-                    code: 'KeyY',
-                    modifiers: { altKey: true, ctrlKey: false, shiftKey: false, metaKey: false },
-                    action: () => true,
-                    description: '',
-                    isCommand: true
-                });
-
-                if (!isAltY) {
-                    plugin.settings.yankPosition = null;
-                }
-            }
+            plugin.handleKeyEvent(event);
 
             // Then
-            expect(plugin.settings.yankPosition).toEqual(yankPosition);
+            expect(plugin.getYankPosition()).toEqual(yankPosition);
         });
 
         it('should rotate kill ring index when M-y is pressed', async () => {
             // Given
-            plugin.settings.killRing = ['text1', 'text2', 'text3'];
-            plugin.settings.killRingIndex = 2;
-            plugin.settings.yankPosition = {
+            plugin.killRing.add('text1');
+            plugin.killRing.add('text2');
+            plugin.killRing.add('text3');
+            plugin.killRing.decreaseCurrentIndex();
+            plugin.setYankPosition({
                 line: 0,
                 ch: 5
-            };
+            });
 
             // When
             await plugin.yank(editor as any);
 
             // Then
-            expect(plugin.settings.killRingIndex).toBe(1);
-        });
-    });
-
-    describe('killRing', () => {
-        it('should update kill ring when text is killed', () => {
-            // Given
-            const text = 'test text';
-
-            // When
-            (plugin as any).addToKillRing(text);
-
-            // Then
-            expect(plugin.settings.killRing).toContain(text);
-            expect(plugin.settings.killRingIndex).toBe(0);
-        });
-
-        it('should rotate kill ring index when M-y is pressed', async () => {
-            // Given
-            plugin.settings.killRing = ['text1', 'text2', 'text3'];
-            plugin.settings.killRingIndex = 2;
-            plugin.settings.yankPosition = {
-                line: 0,
-                ch: 5
-            };
+            expect(plugin.killRing.getCurrentItem()).toBe('text1');
 
             // When
             await plugin.yank(editor as any);
 
             // Then
-            expect(plugin.settings.killRingIndex).toBe(1);
-        });
-
-        it('should respect killRingMaxSize setting', () => {
-            // Given
-            plugin.settings.killRingMaxSize = 3;
-            plugin.settings.killRing = [];
-
-            // When - Add items up to max size
-            (plugin as any).addToKillRing('item1');
-            (plugin as any).addToKillRing('item2');
-            (plugin as any).addToKillRing('item3');
-
-            // Then - All items should be maintained
-            expect(plugin.settings.killRing).toHaveLength(3);
-            expect(plugin.settings.killRing).toEqual(['item1', 'item2', 'item3']);
-            expect(plugin.settings.killRingIndex).toBe(2);
-        });
-
-        it('should remove oldest items when kill ring exceeds max size (LRU/FIFO behavior)', () => {
-            // Given
-            plugin.settings.killRingMaxSize = 3;
-            plugin.settings.killRing = [];
-
-            // When - Add more items than max size
-            (plugin as any).addToKillRing('item1'); // Oldest item (to be removed)
-            (plugin as any).addToKillRing('item2');
-            (plugin as any).addToKillRing('item3');
-            (plugin as any).addToKillRing('item4'); // Most recent item
-
-            // Then - Oldest item should be removed
-            expect(plugin.settings.killRing).toHaveLength(3);
-            expect(plugin.settings.killRing).toEqual(['item2', 'item3', 'item4']);
-            expect(plugin.settings.killRing).not.toContain('item1');
-            expect(plugin.settings.killRingIndex).toBe(2);
-        });
-
-        it('should update killRingIndex correctly when items are removed', () => {
-            // Given
-            plugin.settings.killRingMaxSize = 2;
-            plugin.settings.killRing = ['old-item'];
-
-            // When - Add more items than max size
-            (plugin as any).addToKillRing('new-item1');
-            (plugin as any).addToKillRing('new-item2');
-
-            // Then - killRingIndex should always point to the last item
-            expect(plugin.settings.killRing).toEqual(['new-item1', 'new-item2']);
-            expect(plugin.settings.killRingIndex).toBe(1);
-        });
-
-        it('should handle killRingMaxSize changes dynamically', () => {
-            // Given
-            plugin.settings.killRingMaxSize = 5;
-            plugin.settings.killRing = ['item1', 'item2', 'item3', 'item4', 'item5'];
-
-            // When - Reduce killRingMaxSize and add new item
-            plugin.settings.killRingMaxSize = 3;
-            (plugin as any).addToKillRing('item6');
-
-            // Then - Max size should be applied dynamically
-            expect(plugin.settings.killRing).toHaveLength(3);
-            expect(plugin.settings.killRing).toEqual(['item4', 'item5', 'item6']);
-            expect(plugin.settings.killRingIndex).toBe(2);
+            expect(plugin.killRing.getCurrentItem()).toBe('text3');
         });
     });
 
     describe('killLine', () => {
+
         it('should kill text from cursor to end of line and add to kill ring', () => {
             // Given
             const line = 'Hello, world!\n';
@@ -258,7 +185,7 @@ describe('SonkilPlugin', () => {
                 { line: 0, ch: 7 },
                 { line: 0, ch: line.length }
             );
-            expect(plugin.settings.killRing).toContain('world!\n');
+            expect(plugin.killRing.getCurrentItem()).toContain('world!\n');
         });
 
         it('should kill newline without adding to kill ring', () => {
@@ -276,7 +203,7 @@ describe('SonkilPlugin', () => {
                 { line: 0, ch: line.length - 1 },
                 { line: 1, ch: 0 }
             );
-            expect(plugin.settings.killRing).not.toContain('\n');
+            expect(plugin.killRing.getCurrentItem()).toBeNull();
         });
 
         it('should handle empty line by removing only the newline', () => {
@@ -293,7 +220,113 @@ describe('SonkilPlugin', () => {
                 { line: 0, ch: 0 },
                 { line: 1, ch: 0 }
             );
-            expect(plugin.settings.killRing).not.toContain('\n');
+            expect(plugin.killRing.getCurrentItem()).toBeNull();
+        });
+    });
+
+    describe('mark and region kill', () => {
+
+        it('should kill region from mark to cursor when C-w is pressed', () => {
+            // Given
+            plugin.setMarkPosition({ line: 0, ch: 0 });
+            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
+            editor.getLine = jest.fn().mockReturnValue('Hello, world!');
+            editor.getRange = jest.fn().mockReturnValue('Hello');
+
+            // When
+            plugin.killRegion(editor as any);
+
+            // Then
+            expect(editor.replaceRange).toHaveBeenCalledWith('', { line: 0, ch: 0 }, { line: 0, ch: 5 });
+            expect(plugin.killRing.getCurrentItem()).toContain('Hello');
+        });
+
+        it('should handle multi-line region kill', () => {
+            // Given
+            plugin.setMarkPosition({ line: 0, ch: 0 });
+            editor.getCursor = jest.fn().mockReturnValue({ line: 1, ch: 5 });
+            editor.getLine = jest.fn()
+                .mockReturnValueOnce('Hello')
+                .mockReturnValueOnce('world');
+            editor.getRange = jest.fn().mockReturnValue('Hello\nworld');
+
+            // When
+            plugin.killRegion(editor as any);
+
+            // Then
+            expect(editor.replaceRange).toHaveBeenCalledWith('', { line: 0, ch: 0 }, { line: 1, ch: 5 });
+            expect(plugin.killRing.getCurrentItem()).toContain('Hello\nworld');
+        });
+
+        it('should clear mark position after region kill', () => {
+            // Given
+            plugin.setMarkPosition({ line: 0, ch: 0 });
+            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
+            editor.getLine = jest.fn().mockReturnValue('Hello');
+
+            // Call test target function directly for simplicity
+            plugin.killRegion(editor as any);
+
+            // Then
+            expect(plugin.getMarkPosition()).toBeNull();
+        });
+
+        it('should not kill region if mark is not set', () => {
+            // Given
+            const event = new KeyboardEvent('keydown', {
+                key: 'w',
+                code: 'KeyW',
+                ctrlKey: true
+            });
+            plugin.setMarkPosition(null);
+            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
+
+            // When
+            plugin.handleKeyEvent(event);
+
+            // Then
+            expect(editor.replaceRange).not.toHaveBeenCalled();
+            expect(plugin.killRing.getCurrentItem()).toBeNull();
+        });
+    });
+
+    describe('keyboardQuit', () => {
+        it('should clear mark position when C-g is called', () => {
+            // Given
+            plugin.setMarkPosition({ line: 5, ch: 10 });
+
+            // When
+            plugin.keyboardQuit();
+
+            // Then
+            expect(plugin.getMarkPosition()).toBeNull();
+        });
+
+        it('should exit yank mode when C-g is called', () => {
+            // Given
+            plugin.setYankPosition({
+                line: 0,
+                ch: 5
+            });
+
+            // When
+            plugin.keyboardQuit();
+
+            // Then
+            expect(plugin.getYankPosition()).toBeNull();
+        });
+
+        it('should handle C-g when neither mark nor yank mode is active', () => {
+            // Given
+            plugin.setMarkPosition(null);
+            plugin.setYankPosition(null);
+
+            // When
+            plugin.keyboardQuit();
+
+            // Then
+            expect(plugin.getMarkPosition()).toBeNull();
+            expect(plugin.getYankPosition()).toBeNull();
         });
     });
 
@@ -305,10 +338,10 @@ describe('SonkilPlugin', () => {
 
         it('should handle non-yank key events when yank mode is active', () => {
             // Given
-            plugin.settings.yankPosition = {
+            plugin.setYankPosition({
                 line: 0,
                 ch: 5
-            };
+            });
 
             // When
             const event = new KeyboardEvent('keydown', {
@@ -320,7 +353,7 @@ describe('SonkilPlugin', () => {
             plugin.handleKeyEvent(event);
 
             // Then
-            expect(plugin.settings.yankPosition).toBeNull();
+            expect(plugin.getYankPosition()).toBeNull();
         });
 
         it('should maintain yank mode for M-y key event', () => {
@@ -329,7 +362,7 @@ describe('SonkilPlugin', () => {
                 line: 0,
                 ch: 5
             };
-            plugin.settings.yankPosition = yankPosition;
+            plugin.setYankPosition(yankPosition);
 
             // When
             const event = new KeyboardEvent('keydown', {
@@ -340,15 +373,15 @@ describe('SonkilPlugin', () => {
             plugin.handleKeyEvent(event);
 
             // Then
-            expect(plugin.settings.yankPosition).toEqual(yankPosition);
+            expect(plugin.getYankPosition()).toEqual(yankPosition);
         });
 
         it('should handle C-g key event to exit yank mode', () => {
             // Given
-            plugin.settings.yankPosition = {
+            plugin.setYankPosition({
                 line: 0,
                 ch: 5
-            };
+            });
 
             // When
             const event = new KeyboardEvent('keydown', {
@@ -359,7 +392,7 @@ describe('SonkilPlugin', () => {
             plugin.handleKeyEvent(event);
 
             // Then
-            expect(plugin.settings.yankPosition).toBeNull();
+            expect(plugin.getYankPosition()).toBeNull();
         });
 
         it('should handle Ctrl+K', () => {
@@ -383,7 +416,7 @@ describe('SonkilPlugin', () => {
                 { line: 0, ch: 0 },
                 { line: 0, ch: line.length }
             );
-            expect(plugin.settings.killRing).toContain(line);
+            expect(plugin.killRing.getCurrentItem()).toContain(line);
         });
 
         it('should handle Ctrl+W with mark', () => {
@@ -393,7 +426,7 @@ describe('SonkilPlugin', () => {
                 code: 'KeyW',
                 ctrlKey: true
             });
-            plugin.settings.markPosition = { line: 0, ch: 0 };
+            plugin.setMarkPosition({ line: 0, ch: 0 });
             editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
             editor.getLine = jest.fn().mockReturnValue('Hello, world!');
 
@@ -405,19 +438,21 @@ describe('SonkilPlugin', () => {
             expect(editor.replaceRange).toHaveBeenCalledWith('', { line: 0, ch: 0 }, { line: 0, ch: 5 });
         });
 
-        it('should handle Alt+Y with previous yank', () => {
+        it('should handle Alt+Y with previous yank', async () => {
             // Given
             const event = new KeyboardEvent('keydown', {
                 key: 'y',
                 code: 'KeyY',
-                altKey: true
+                altKey: true,
+                ctrlKey: false
             });
-            plugin.settings.killRing = ['texttext', 'text'];
-            plugin.settings.killRingIndex = 1;
-            plugin.settings.yankPosition = {
+            plugin.killRing.add('text1');
+            plugin.killRing.add('text2');
+            plugin.killRing.decreaseCurrentIndex();
+            plugin.setYankPosition({
                 line: 0,
                 ch: 3
-            };
+            });
             editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 7 });
 
             // When
@@ -425,8 +460,8 @@ describe('SonkilPlugin', () => {
 
             // Then
             expect(result).toBe(true);
-            expect(plugin.settings.killRingIndex).toBe(0);
-            expect(plugin.settings.yankPosition).toEqual({
+            expect(plugin.killRing.getCurrentItem()).toBe('text2');
+            expect(plugin.getYankPosition()).toEqual({
                 line: 0,
                 ch: 3
             });
@@ -439,16 +474,17 @@ describe('SonkilPlugin', () => {
                 code: 'KeyY',
                 altKey: true
             });
-            plugin.settings.killRing = ['text1', 'text2'];
-            plugin.settings.killRingIndex = 1;
-            plugin.settings.yankPosition = null;
+            plugin.killRing.add('text1');
+            plugin.killRing.add('text2');
+            plugin.killRing.decreaseCurrentIndex();
+            plugin.setYankPosition(null);
 
             // When
             const result = plugin.handleKeyEvent(event);
 
             // Then
             expect(result).toBe(true);
-            expect(plugin.settings.killRingIndex).toBe(1);
+            expect(plugin.killRing.getCurrentItem()).toBe('text1');
         });
 
         it('should handle Ctrl+G to quit operations', () => {
@@ -458,11 +494,11 @@ describe('SonkilPlugin', () => {
                 code: 'KeyG',
                 ctrlKey: true
             });
-            plugin.settings.markPosition = { line: 3, ch: 5 };
-            plugin.settings.yankPosition = {
+            plugin.setMarkPosition({ line: 3, ch: 5 });
+            plugin.setYankPosition({
                 line: 0,
                 ch: 4
-            };
+            });
 
             // Mock the keyboardQuit method
             plugin.keyboardQuit = jest.fn().mockReturnValue(true);
@@ -521,198 +557,20 @@ describe('SonkilPlugin', () => {
         });
     });
 
-    describe('plugin lifecycle', () => {
-        it('should initialize settings on load', async () => {
+    describe('config operations', () => {
+        it('should load config from data', async () => {
             // Given
-            await plugin.loadSettings();
-
-            // Then
-            expect(plugin.settings).toEqual({
-                killRing: [],
-                killRingIndex: -1,
-                yankPosition: null,
-                markPosition: null,
-                killRingMaxSize: 60
-            });
-        });
-
-        it('should clean up on unload', () => {
-            // Given
-            plugin.settings.killRing = ['text'];
-            plugin.settings.killRingIndex = 0;
-            plugin.settings.yankPosition = {
-                line: 0,
-                ch: 4
+            const config = {
+                killRingMaxSize: 100
             };
+            plugin.saveData = jest.fn().mockResolvedValue(undefined);
+            plugin.loadData = jest.fn().mockResolvedValue(config);
 
             // When
-            plugin.onunload();
+            await plugin.loadConfig();
 
             // Then
-            expect(plugin.settings.killRing).toEqual([]);
-            expect(plugin.settings.killRingIndex).toBe(-1);
-            expect(plugin.settings.yankPosition).toBeNull();
-        });
-
-        it('should save settings', async () => {
-            // Given
-            plugin.settings.killRing = ['text'];
-            plugin.settings.killRingIndex = 0;
-            plugin.settings.yankPosition = null;
-
-            // When
-            await plugin.saveSettings();
-
-            // Then
-            expect(plugin.saveData).toHaveBeenCalledWith(plugin.settings);
-        });
-    });
-
-    describe('mark and region kill', () => {
-        it('should set mark position when C-space is pressed', () => {
-            // Given
-            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
-
-            // Mock implementation of App's getActiveViewOfType
-            app.workspace.getActiveViewOfType = jest.fn().mockReturnValue(view);
-
-            // Set keyBindings directly if not already set
-            if (!plugin.keyBindings) {
-                plugin.keyBindings = [];
-            }
-
-            // Set mock action
-            const spaceAction = jest.fn().mockImplementation((editor) => {
-                plugin.settings.markPosition = editor.getCursor();
-                return true;
-            });
-
-            // Add or replace test keyBinding directly
-            const spaceBindingIndex = plugin.keyBindings.findIndex(b =>
-                b.key === ' ' && b.modifiers?.ctrlKey === true);
-
-            if (spaceBindingIndex >= 0) {
-                plugin.keyBindings[spaceBindingIndex].action = spaceAction;
-            } else {
-                plugin.keyBindings.push({
-                    key: ' ',
-                    code: 'Space',
-                    modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-                    action: spaceAction,
-                    description: 'mark setting',
-                    isCommand: true
-                });
-            }
-
-            // When
-            const result = spaceAction(editor as any, view as any);
-
-            // Then
-            expect(result).toBe(true);
-            expect(plugin.settings.markPosition).toEqual({ line: 0, ch: 5 });
-        });
-
-        it('should kill region from mark to cursor when C-w is pressed', () => {
-            // Given
-            plugin.settings.markPosition = { line: 0, ch: 0 };
-            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
-            editor.getLine = jest.fn().mockReturnValue('Hello, world!');
-            editor.getRange = jest.fn().mockReturnValue('Hello');
-
-            // When
-            plugin.killRegion(editor as any);
-
-            // Then
-            expect(editor.replaceRange).toHaveBeenCalledWith('', { line: 0, ch: 0 }, { line: 0, ch: 5 });
-            expect(plugin.settings.killRing).toContain('Hello');
-        });
-
-        it('should handle multi-line region kill', () => {
-            // Given
-            plugin.settings.markPosition = { line: 0, ch: 0 };
-            editor.getCursor = jest.fn().mockReturnValue({ line: 1, ch: 5 });
-            editor.getLine = jest.fn()
-                .mockReturnValueOnce('Hello')
-                .mockReturnValueOnce('world');
-            editor.getRange = jest.fn().mockReturnValue('Hello\nworld');
-
-            // When
-            plugin.killRegion(editor as any);
-
-            // Then
-            expect(editor.replaceRange).toHaveBeenCalledWith('', { line: 0, ch: 0 }, { line: 1, ch: 5 });
-            expect(plugin.settings.killRing).toContain('Hello\nworld');
-        });
-
-        it('should clear mark position after region kill', () => {
-            // Given
-            plugin.settings.markPosition = { line: 0, ch: 0 };
-            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
-            editor.getLine = jest.fn().mockReturnValue('Hello');
-
-            // Call test target function directly for simplicity
-            plugin.killRegion(editor as any);
-
-            // Then
-            expect(plugin.settings.markPosition).toBeNull();
-        });
-
-        it('should not kill region if mark is not set', () => {
-            // Given
-            const event = new KeyboardEvent('keydown', {
-                key: 'w',
-                code: 'KeyW',
-                ctrlKey: true
-            });
-            plugin.settings.markPosition = null;
-            editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
-
-            // When
-            plugin.handleKeyEvent(event);
-
-            // Then
-            expect(editor.replaceRange).not.toHaveBeenCalled();
-            expect(plugin.settings.killRing).not.toContain('Hello, world!');
-        });
-    });
-
-    describe('keyboardQuit', () => {
-        it('should clear mark position when C-g is called', () => {
-            // Given
-            plugin.settings.markPosition = { line: 5, ch: 10 };
-
-            // When
-            plugin.keyboardQuit();
-
-            // Then
-            expect(plugin.settings.markPosition).toBeNull();
-        });
-
-        it('should exit yank mode when C-g is called', () => {
-            // Given
-            plugin.settings.yankPosition = {
-                line: 0,
-                ch: 5
-            };
-
-            // When
-            plugin.keyboardQuit();
-
-            // Then
-            expect(plugin.settings.yankPosition).toBeNull();
-        });
-
-        it('should handle C-g when neither mark nor yank mode is active', () => {
-            // Given
-            plugin.settings.markPosition = null;
-            plugin.settings.yankPosition = null;
-
-            // When
-            plugin.keyboardQuit();
-
-            // Then
-            expect(plugin.settings.markPosition).toBeNull();
-            expect(plugin.settings.yankPosition).toBeNull();
+            expect(plugin.config.killRingMaxSize).toBe(100);
         });
     });
 });

@@ -29,16 +29,57 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
+
+// killRing.ts
+var KillRing = class {
+  constructor(maxSize = 60, clipboard = navigator.clipboard) {
+    this.items = [];
+    this.currentIndex = -1;
+    this.maxSize = maxSize;
+    this.clipboard = clipboard;
+  }
+  add(text) {
+    this.items.push(text);
+    if (this.items.length > this.maxSize) {
+      this.items = this.items.slice(-this.maxSize);
+    }
+    this.currentIndex = this.items.length - 1;
+    this.clipboard.writeText(text).catch((err) => {
+      console.error("Failed to write to clipboard:", err);
+    });
+  }
+  decreaseCurrentIndex() {
+    if (this.items.length === 0)
+      return;
+    this.currentIndex = (this.currentIndex - 1 + this.items.length) % this.items.length;
+  }
+  getCurrentItem() {
+    if (this.currentIndex === -1 || this.items.length === 0)
+      return null;
+    return this.items[this.currentIndex];
+  }
+  setMaxSize(newSize) {
+    if (newSize < 1)
+      throw new Error("Kill Ring size must be at least 1");
+    this.maxSize = newSize;
+    if (this.items.length > newSize) {
+      this.items = this.items.slice(-newSize);
+      this.currentIndex = Math.min(this.currentIndex, this.items.length - 1);
+    }
+  }
+};
+
+// main.ts
+var DEFAULT_KILL_RING_SIZE = 60;
 var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
-    this.settings = {
-      killRing: [],
-      killRingIndex: -1,
-      yankPosition: null,
-      markPosition: null,
-      killRingMaxSize: 60
+    this.yankPosition = null;
+    this.markPosition = null;
+    this.config = {
+      killRingMaxSize: DEFAULT_KILL_RING_SIZE
     };
+    this.killRing = new KillRing(DEFAULT_KILL_RING_SIZE);
     this.keyBindings = [
       {
         key: "g",
@@ -53,7 +94,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         code: "Space",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.settings.markPosition = editor.getCursor();
+          this.markPosition = editor.getCursor();
           return true;
         },
         description: "Set mark",
@@ -86,7 +127,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         code: "KeyY",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.settings.yankPosition = null;
+          this.yankPosition = null;
           this.yank(editor);
           return true;
         },
@@ -107,7 +148,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     ];
   }
   async onload() {
-    await this.loadSettings();
+    await this.loadConfig();
     console.log("Sonkil plugin loaded, kill ring initialized");
     this.registerDomEvent(document, "keydown", (evt) => {
       const target = evt.target;
@@ -136,13 +177,6 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     });
     this.addSettingTab(new SonkilSettingTab(this.app, this));
   }
-  addToKillRing(text) {
-    this.settings.killRing.push(text);
-    if (this.settings.killRing.length > this.settings.killRingMaxSize) {
-      this.settings.killRing = this.settings.killRing.slice(-this.settings.killRingMaxSize);
-    }
-    this.settings.killRingIndex = this.settings.killRing.length - 1;
-  }
   sortPositions(a, b) {
     return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
   }
@@ -155,51 +189,49 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       editor.replaceRange("", cursorPosition, nextLineFirstCharPosition);
       return;
     }
-    this.addToKillRing(text);
+    this.killRing.add(text);
     const lastCharPosition = { line: cursorPosition.line, ch: line.length };
     editor.replaceRange("", cursorPosition, lastCharPosition);
   }
   killRegion(editor) {
-    if (this.settings.markPosition) {
-      const from = this.settings.markPosition;
+    if (this.markPosition) {
+      const from = this.markPosition;
       const to = editor.getCursor();
       const [start, end] = this.sortPositions(from, to);
       const text = editor.getRange(start, end);
-      this.addToKillRing(text);
+      this.killRing.add(text);
       editor.replaceRange("", start, end);
-      this.settings.markPosition = null;
+      this.markPosition = null;
     } else {
       const selection = editor.getSelection();
       if (selection) {
-        this.addToKillRing(selection);
+        this.killRing.add(selection);
         editor.replaceSelection("");
       }
     }
   }
-  getNextKillRingIndex() {
-    const index = this.settings.killRingIndex - 1;
-    const length = this.settings.killRing.length;
-    return (index + length) % length;
-  }
   async yank(editor) {
-    if (this.settings.killRing.length === 0) {
+    if (this.killRing.getCurrentItem() === null) {
       const clipboardText = await navigator.clipboard.readText();
       if (clipboardText) {
-        this.addToKillRing(clipboardText);
+        this.killRing.add(clipboardText);
       }
     }
     const cursorPostion = editor.getCursor();
-    if (!this.settings.yankPosition) {
-      this.settings.yankPosition = cursorPostion;
+    if (!this.yankPosition) {
+      this.yankPosition = cursorPostion;
     } else {
-      this.settings.killRingIndex = this.getNextKillRingIndex();
+      this.killRing.decreaseCurrentIndex();
     }
-    editor.setSelection(this.settings.yankPosition, cursorPostion);
-    editor.replaceSelection(this.settings.killRing[this.settings.killRingIndex]);
+    const currentItem = this.killRing.getCurrentItem();
+    if (currentItem) {
+      editor.setSelection(this.yankPosition, cursorPostion);
+      editor.replaceSelection(currentItem);
+    }
   }
   keyboardQuit() {
-    this.settings.markPosition = null;
-    this.settings.yankPosition = null;
+    this.markPosition = null;
+    this.yankPosition = null;
     return true;
   }
   handleKeyEvent(evt) {
@@ -214,8 +246,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         }
       }
     }
-    if (this.settings.yankPosition && !["Control", "Alt"].includes(evt.key)) {
-      this.settings.yankPosition = null;
+    if (this.yankPosition && !["Control", "Alt"].includes(evt.key)) {
+      this.yankPosition = null;
     }
     return false;
   }
@@ -231,51 +263,41 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     return keyMatches && modifiersMatch;
   }
   onunload() {
-    console.log("Sonkil plugin unloading, cleaning up kill ring");
-    this.settings.killRing = [];
-    this.settings.killRingIndex = -1;
-    this.settings.yankPosition = null;
-    this.settings.markPosition = null;
+    this.markPosition = null;
+    this.yankPosition = null;
   }
-  async loadSettings() {
+  async loadConfig() {
     const loadedData = await this.loadData();
-    this.settings = {
-      killRing: [],
-      killRingIndex: -1,
-      yankPosition: null,
-      markPosition: null,
-      killRingMaxSize: 60,
-      ...loadedData
-    };
-    console.log("Sonkil settings loaded:", this.settings);
+    if (loadedData) {
+      this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
+    }
+    this.killRing = new KillRing(this.config.killRingMaxSize);
   }
-  async saveSettings() {
-    await this.saveData(this.settings);
-    console.log("Sonkil settings saved:", this.settings);
+  async saveConfig() {
+    await this.saveData(this.config);
+  }
+  async setKillRingMaxSize(size) {
+    this.config.killRingMaxSize = size;
+    this.killRing.setMaxSize(size);
+    await this.saveConfig();
+  }
+  getKillRingMaxSize() {
+    return this.config.killRingMaxSize;
   }
 };
 var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {
   constructor(app, plugin) {
     super(app, plugin);
-    this.plugin = plugin;
+    this.configHandler = plugin;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Sonkil Settings" });
-    new import_obsidian.Setting(containerEl).setName("Kill Ring Size").setDesc("Maximum number of items to keep in kill ring").addText((text) => text.setValue(String(this.plugin.settings.killRingMaxSize)).setPlaceholder("60").onChange(async (value) => {
-      const size = parseInt(value);
-      if (!isNaN(size) && size > 0) {
-        this.plugin.settings.killRingMaxSize = size;
-        if (this.plugin.settings.killRing.length > size) {
-          this.plugin.settings.killRing = this.plugin.settings.killRing.slice(-size);
-          this.plugin.settings.killRingIndex = Math.min(
-            this.plugin.settings.killRingIndex,
-            this.plugin.settings.killRing.length - 1
-          );
-        }
-        await this.plugin.saveSettings();
-        console.log(`Kill Ring Size\uAC00 ${size}\uB85C \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
+    new import_obsidian.Setting(containerEl).setName("Kill Ring Max Size").setDesc("Maximum number of items to keep in the kill ring").addText((text) => text.setPlaceholder("Enter max size").setValue(this.configHandler.getKillRingMaxSize().toString()).onChange(async (value) => {
+      const newSize = parseInt(value);
+      if (!isNaN(newSize) && newSize > 0) {
+        await this.configHandler.setKillRingMaxSize(newSize);
       }
     }));
   }
