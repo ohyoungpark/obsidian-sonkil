@@ -85,8 +85,22 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "g",
         code: "KeyG",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: () => this.keyboardQuit(),
+        action: () => {
+          this.keyboardQuit();
+          return true;
+        },
         description: "Cancel mark and exit yank mode",
+        isCommand: false
+      },
+      {
+        key: "Escape",
+        code: "Escape",
+        modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
+        action: () => {
+          this.keyboardQuit();
+          return false;
+        },
+        description: "Cancel mark and exit yank mode (with ESC state)",
         isCommand: false
       },
       {
@@ -150,18 +164,23 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   async onload() {
     await this.loadConfig();
     console.log("Sonkil plugin loaded, kill ring initialized");
-    this.registerDomEvent(document, "keydown", (evt) => {
-      const target = evt.target;
-      if (target.classList.contains("inline-title") || target.closest(".inline-title") !== null) {
-        console.log("Inline title detected, skipping");
-        return;
-      }
-      const isHandled = this.handleKeyEvent(evt);
-      if (isHandled) {
-        evt.preventDefault();
-        evt.stopPropagation();
-      }
-    }, true);
+    this.registerDomEvent(
+      document,
+      "keydown",
+      (evt) => {
+        const target = evt.target;
+        if (target.classList.contains("inline-title") || target.closest(".inline-title") !== null) {
+          console.log("Inline title detected, skipping");
+          return;
+        }
+        const shouldBlockEvent = this.handleKeyEvent(evt);
+        if (shouldBlockEvent) {
+          evt.preventDefault();
+          evt.stopPropagation();
+        }
+      },
+      true
+    );
     this.keyBindings.forEach((binding) => {
       const commandId = `sonkil-${binding.description.toLowerCase().replace(/\s+/g, "-")}`;
       const commandName = `${binding.description} (${binding.modifiers.ctrlKey ? "C-" : ""}${binding.modifiers.altKey ? "M-" : ""}${binding.key})`;
@@ -232,7 +251,6 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   keyboardQuit() {
     this.markPosition = null;
     this.yankPosition = null;
-    return true;
   }
   handleKeyEvent(evt) {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -294,11 +312,13 @@ var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {
     const { containerEl } = this;
     containerEl.empty();
     containerEl.createEl("h2", { text: "Sonkil Settings" });
-    new import_obsidian.Setting(containerEl).setName("Kill Ring Max Size").setDesc("Maximum number of items to keep in the kill ring").addText((text) => text.setPlaceholder("Enter max size").setValue(this.configHandler.getKillRingMaxSize().toString()).onChange(async (value) => {
-      const newSize = parseInt(value);
-      if (!isNaN(newSize) && newSize > 0) {
-        await this.configHandler.setKillRingMaxSize(newSize);
-      }
-    }));
+    new import_obsidian.Setting(containerEl).setName("Kill Ring Max Size").setDesc("Maximum number of items to keep in the kill ring").addText(
+      (text) => text.setPlaceholder("Enter max size").setValue(this.configHandler.getKillRingMaxSize().toString()).onChange(async (value) => {
+        const newSize = parseInt(value);
+        if (!isNaN(newSize) && newSize > 0) {
+          await this.configHandler.setKillRingMaxSize(newSize);
+        }
+      })
+    );
   }
 };

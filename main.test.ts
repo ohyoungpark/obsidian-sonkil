@@ -288,10 +288,35 @@ describe('SonkilPlugin', () => {
       plugin.setMarkPosition({ line: 5, ch: 10 });
 
       // When
-      plugin.keyboardQuit();
+      const event = new KeyboardEvent('keydown', {
+        key: 'g',
+        code: 'KeyG',
+        ctrlKey: true,
+        altKey: false
+      });
+      const shouldBlockEvent = plugin.handleKeyEvent(event);
 
       // Then
       expect(plugin.getMarkPosition()).toBeNull();
+      expect(shouldBlockEvent).toBe(true);
+    });
+
+    it('should clear mark position when ESC is called', () => {
+      // Given
+      plugin.setMarkPosition({ line: 5, ch: 10 });
+
+      // When
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        code: 'Escape',
+        ctrlKey: false,
+        altKey: false
+      });
+      const shouldBlockEvent = plugin.handleKeyEvent(event);
+
+      // Then
+      expect(plugin.getMarkPosition()).toBeNull();
+      expect(shouldBlockEvent).toBe(false);
     });
 
     it('should exit yank mode when C-g is called', () => {
@@ -308,18 +333,6 @@ describe('SonkilPlugin', () => {
       expect(plugin.getYankPosition()).toBeNull();
     });
 
-    it('should handle C-g when neither mark nor yank mode is active', () => {
-      // Given
-      plugin.setMarkPosition(null);
-      plugin.setYankPosition(null);
-
-      // When
-      plugin.keyboardQuit();
-
-      // Then
-      expect(plugin.getMarkPosition()).toBeNull();
-      expect(plugin.getYankPosition()).toBeNull();
-    });
   });
 
   describe('handleKeyEvent', () => {

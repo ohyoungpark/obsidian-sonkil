@@ -22,6 +22,11 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 - When kill ring is empty, `C-y` will import content from system clipboard into kill ring
 - Cut/copied text is automatically copied to system clipboard
 
+### Cancel Operations
+
+- `C-g`: Cancel current operation (mark, yank mode)
+- `ESC`: Same as `C-g` but maintains ESC state for additional operations
+
 ## Installation
 
 ### For Regular Users

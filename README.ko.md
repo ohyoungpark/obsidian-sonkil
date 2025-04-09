@@ -11,6 +11,11 @@ Sonkil은 Obsidian에서 이맥스 스타일의 텍스트 조작 기능을 제�
 - `C-w`: 마크와 현재 커서 사이의 텍스트를 잘라내기 (Kill Region)
 - `M-w`: 마크와 현재 커서 사이의 텍스트를 복사하기 (Copy Region)
 
+### 작업 취소
+
+- `C-g`: 현재 작업 취소 (마크, Yank 모드 등)
+- `ESC`: `C-g`와 동일한 기능을 수행하며, 추가 작업을 위한 ESC 상태 유지
+
 ### Kill Ring
 
 - `C-y`: Kill ring에서 가장 최근 텍스트 붙여넣기 (Yank)

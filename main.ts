@@ -39,8 +39,22 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'g',
         code: 'KeyG',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: () => this.keyboardQuit(),
+        action: () => {
+          this.keyboardQuit();
+          return true;
+        },
         description: 'Cancel mark and exit yank mode',
+        isCommand: false,
+      },
+      {
+        key: 'Escape',
+        code: 'Escape',
+        modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
+        action: () => {
+          this.keyboardQuit();
+          return false;
+        },
+        description: 'Cancel mark and exit yank mode (with ESC state)',
         isCommand: false,
       },
       {
@@ -120,8 +134,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         }
 
         // Delegate all key event handling to handleKeyEvent
-        const isHandled: boolean = this.handleKeyEvent(evt);
-        if (isHandled) {
+        const shouldBlockEvent: boolean = this.handleKeyEvent(evt);
+        if (shouldBlockEvent) {
           evt.preventDefault();
           evt.stopPropagation();
         }
@@ -217,10 +231,9 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     }
   }
 
-  keyboardQuit(): boolean {
+  keyboardQuit(): void {
     this.markPosition = null;
     this.yankPosition = null;
-    return true;
   }
 
   handleKeyEvent(evt: KeyboardEvent): boolean {
@@ -229,7 +242,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
     const editor = view.editor;
 
-    if (evt.ctrlKey || evt.altKey) {
+    if (evt.ctrlKey || evt.altKey || evt.key === 'Escape') {
       for (const binding of this.keyBindings) {
         if (this.isKeyBindingMatch(evt, binding)) {
           return binding.action(editor);
