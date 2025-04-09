@@ -12,6 +12,21 @@ build/
 .env
 .env.local
 .env.*.local
+*.env
+*.env.*
+
+# API Keys and Secrets
+*.key
+*.pem
+*.cert
+*.crt
+*.secret
+*.token
+*.credentials
+*.config.json
+config.json
+secrets.json
+credentials.json
 
 # IDE/Editor
 .vscode/
