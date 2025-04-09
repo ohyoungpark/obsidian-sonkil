@@ -11,6 +11,7 @@ https://github.com/ohyoungpark/obsidian-sonkil
 `;
 
 const prod = process.argv[2] === "production";
+const outfile = process.env.OUT_FILE || "main.js";
 
 const context = await esbuild.context({
 	banner: {
@@ -39,7 +40,7 @@ const context = await esbuild.context({
 	logLevel: "info",
 	sourcemap: prod ? false : "inline",
 	treeShaking: true,
-	outfile: "main.js",
+	outfile,
 });
 
 if (prod) {
