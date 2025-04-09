@@ -1,4 +1,4 @@
-import { Editor as ObsidianEditor, EditorPosition } from 'obsidian';
+import { Editor as ObsidianEditor } from 'obsidian';
 
 export interface ModifierKey {
     ctrlKey: boolean;
