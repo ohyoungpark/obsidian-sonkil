@@ -1,6 +1,10 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Check build status first
+node scripts/check-build-status.js || exit 1
+
+# Run other checks
 npm run lint
 npm test
 node scripts/check-secrets.js

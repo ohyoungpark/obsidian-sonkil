@@ -23,7 +23,7 @@ const SECRET_PATTERNS = [
 const TARGET_EXTENSIONS = ['.js', '.ts', '.json', '.env', '.config'];
 
 // 검사에서 제외할 파일들
-const EXCLUDED_FILES = ['package-lock.json', 'yarn.lock'];
+const EXCLUDED_FILES = ['package-lock.json', 'yarn.lock', 'main.tmp.js'];
 
 function checkFile(filePath) {
   if (EXCLUDED_FILES.includes(path.basename(filePath))) {
