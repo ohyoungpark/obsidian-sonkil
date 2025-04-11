@@ -10,6 +10,7 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 - `C-k`: Cut text from cursor position to end of line (Kill Line)
 - `C-w`: Cut text between mark and cursor (Kill Region)
 - `M-w`: Copy text between mark and cursor (Copy Region)
+- `C-l`: Recenter editor view (Center/Start/End)
 
 ### Kill Ring
 

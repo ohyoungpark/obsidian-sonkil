@@ -7,8 +7,11 @@ import {
   PluginSettingTab,
   Setting,
 } from 'obsidian';
+import { EditorView } from '@codemirror/view';
+
 import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
 import { KillRing } from './killRing';
+import { RecenterCursorPlugin } from './RecenterCursorPlugin';
 
 const DEFAULT_KILL_RING_SIZE = 60;
 
@@ -21,6 +24,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   protected yankPosition: EditorPosition | null;
   protected markPosition: EditorPosition | null;
   private keyBindings: KeyBinding[];
+  private recenterPlugin = new RecenterCursorPlugin();
   killRing: KillRing;
   config: SonkilConfig;
 
@@ -111,6 +115,17 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
           return true;
         },
         description: 'Yank pop',
+        isCommand: true,
+      },
+      {
+        key: 'l',
+        code: 'KeyL',
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
+        action: (editor: Editor) => {
+          this.recenterEditor(editor);
+          return true;
+        },
+        description: 'Recenter editor',
         isCommand: true,
       },
     ];
@@ -234,6 +249,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   keyboardQuit(): void {
     this.markPosition = null;
     this.yankPosition = null;
+    this.recenterPlugin.reset();
   }
 
   handleKeyEvent(evt: KeyboardEvent): boolean {
@@ -250,8 +266,11 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
       }
     }
 
-    if (this.yankPosition && !['Control', 'Alt'].includes(evt.key)) {
-      this.yankPosition = null;
+    if (!['Control', 'Alt'].includes(evt.key)) {
+      if (this.yankPosition) {
+        this.yankPosition = null;
+      }
+      this.recenterPlugin.reset();
     }
 
     return false;
@@ -274,6 +293,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   onunload() {
     this.markPosition = null;
     this.yankPosition = null;
+    this.recenterPlugin.reset();
   }
 
   async loadConfig() {
@@ -296,6 +316,25 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
   getKillRingMaxSize(): number {
     return this.config.killRingMaxSize;
+  }
+
+  private recenterEditor(editor: Editor): void {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) return;
+
+    const cmView = (editor as any).cm as EditorView;
+    if (!cmView) return;
+
+    const pos = cmView.state.selection.main.head;
+    const line = cmView.state.doc.lineAt(pos);
+    const mode = this.recenterPlugin.getNextMode();
+
+    cmView.dispatch({
+      effects: EditorView.scrollIntoView(line.from, {
+        y: mode,
+        x: 'nearest'
+      })
+    });
   }
 }
 

@@ -10,6 +10,7 @@ Sonkil은 Obsidian에서 이맥스 스타일의 텍스트 조작 기능을 제�
 - `C-k`: 현재 커서 위치부터 줄 끝까지 텍스트를 잘라내기 (Kill Line)
 - `C-w`: 마크와 현재 커서 사이의 텍스트를 잘라내기 (Kill Region)
 - `M-w`: 마크와 현재 커서 사이의 텍스트를 복사하기 (Copy Region)
+- `C-l`: 에디터 뷰 리센터링 (Center/Start/End)
 
 ### 작업 취소
 

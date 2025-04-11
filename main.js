@@ -29,6 +29,7 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
+var import_view = require("@codemirror/view");
 
 // killRing.ts
 var KillRing = class {
@@ -69,11 +70,30 @@ var KillRing = class {
   }
 };
 
+// RecenterCursorPlugin.ts
+var RecenterCursorPlugin = class {
+  constructor() {
+    this.modes = ["center", "start", "end"];
+    this.currentIndex = 0;
+  }
+  getNextMode() {
+    const mode = this.modes[this.currentIndex];
+    this.currentIndex = (this.currentIndex + 1) % this.modes.length;
+    return mode;
+  }
+  reset() {
+    if (this.currentIndex !== 0) {
+      this.currentIndex = 0;
+    }
+  }
+};
+
 // main.ts
 var DEFAULT_KILL_RING_SIZE = 60;
 var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
+    this.recenterPlugin = new RecenterCursorPlugin();
     this.yankPosition = null;
     this.markPosition = null;
     this.config = {
@@ -157,6 +177,17 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
           return true;
         },
         description: "Yank pop",
+        isCommand: true
+      },
+      {
+        key: "l",
+        code: "KeyL",
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
+        action: (editor) => {
+          this.recenterEditor(editor);
+          return true;
+        },
+        description: "Recenter editor",
         isCommand: true
       }
     ];
@@ -251,6 +282,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   keyboardQuit() {
     this.markPosition = null;
     this.yankPosition = null;
+    this.recenterPlugin.reset();
   }
   handleKeyEvent(evt) {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -264,8 +296,11 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         }
       }
     }
-    if (this.yankPosition && !["Control", "Alt"].includes(evt.key)) {
-      this.yankPosition = null;
+    if (!["Control", "Alt"].includes(evt.key)) {
+      if (this.yankPosition) {
+        this.yankPosition = null;
+      }
+      this.recenterPlugin.reset();
     }
     return false;
   }
@@ -283,6 +318,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   onunload() {
     this.markPosition = null;
     this.yankPosition = null;
+    this.recenterPlugin.reset();
   }
   async loadConfig() {
     const loadedData = await this.loadData();
@@ -301,6 +337,23 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   }
   getKillRingMaxSize() {
     return this.config.killRingMaxSize;
+  }
+  recenterEditor(editor) {
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    if (!view)
+      return;
+    const cmView = editor.cm;
+    if (!cmView)
+      return;
+    const pos = cmView.state.selection.main.head;
+    const line = cmView.state.doc.lineAt(pos);
+    const mode = this.recenterPlugin.getNextMode();
+    cmView.dispatch({
+      effects: import_view.EditorView.scrollIntoView(line.from, {
+        y: mode,
+        x: "nearest"
+      })
+    });
   }
 };
 var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {

@@ -3,6 +3,7 @@ import SonkilPlugin from './main';
 import { ClipboardInterface } from './killRing';
 import { TestKillRing } from './killRing.test';
 import { EditorPosition } from 'obsidian';
+import { RecenterCursorPlugin } from './RecenterCursorPlugin';
 
 // Mock clipboard implementation
 class MockClipboard implements ClipboardInterface {
@@ -578,4 +579,47 @@ describe('SonkilPlugin', () => {
       expect(plugin.config.killRingMaxSize).toBe(100);
     });
   });
+});
+
+describe('RecenterCursorPlugin', () => {
+    let plugin: RecenterCursorPlugin;
+
+    beforeEach(() => {
+        plugin = new RecenterCursorPlugin();
+    });
+
+    test('should start with center mode', () => {
+        expect(plugin.getNextMode()).toBe('center');
+    });
+
+    test('should cycle through modes in correct order', () => {
+        expect(plugin.getNextMode()).toBe('center');
+        expect(plugin.getNextMode()).toBe('start');
+        expect(plugin.getNextMode()).toBe('end');
+        expect(plugin.getNextMode()).toBe('center');
+    });
+
+    test('should reset to initial state', () => {
+        // Move through all modes
+        plugin.getNextMode(); // center
+        plugin.getNextMode(); // start
+        plugin.getNextMode(); // end
+
+        plugin.reset();
+        expect(plugin.getNextMode()).toBe('center');
+    });
+
+    test('should maintain cycle after reset', () => {
+        // First cycle
+        plugin.getNextMode(); // center
+        plugin.getNextMode(); // start
+        plugin.getNextMode(); // end
+
+        plugin.reset();
+
+        // Second cycle should be the same
+        expect(plugin.getNextMode()).toBe('center');
+        expect(plugin.getNextMode()).toBe('start');
+        expect(plugin.getNextMode()).toBe('end');
+    });
 });
