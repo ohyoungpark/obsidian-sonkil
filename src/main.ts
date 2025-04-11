@@ -128,6 +128,28 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         description: 'Recenter editor',
         isCommand: true,
       },
+      {
+        key: 'ArrowUp',
+        code: 'ArrowUp',
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
+        action: (editor: Editor) => {
+          this.moveLineUp(editor);
+          return true;
+        },
+        description: 'Move line up',
+        isCommand: true,
+      },
+      {
+        key: 'ArrowDown',
+        code: 'ArrowDown',
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
+        action: (editor: Editor) => {
+          this.moveLineDown(editor);
+          return true;
+        },
+        description: 'Move line down',
+        isCommand: true,
+      },
     ];
   }
 
@@ -335,6 +357,14 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         x: 'nearest'
       })
     });
+  }
+
+  private moveLineUp(editor: Editor): void {
+    editor.exec('swapLineUp');
+  }
+
+  private moveLineDown(editor: Editor): void {
+    editor.exec('swapLineDown');
   }
 }
 

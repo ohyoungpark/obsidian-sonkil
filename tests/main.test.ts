@@ -1,9 +1,9 @@
-import { App, Editor, MarkdownView, IEditor, IMarkdownView, IApp } from './__mocks__/obsidian';
-import SonkilPlugin from './main';
-import { ClipboardInterface } from './killRing';
+import { App, Editor, MarkdownView, IEditor, IMarkdownView, IApp } from '../__mocks__/obsidian';
+import SonkilPlugin from '../src/main';
+import { ClipboardInterface } from '../src/killRing';
 import { TestKillRing } from './killRing.test';
 import { EditorPosition } from 'obsidian';
-import { RecenterCursorPlugin } from './RecenterCursorPlugin';
+import { RecenterCursorPlugin } from '../src/RecenterCursorPlugin';
 
 // Mock clipboard implementation
 class MockClipboard implements ClipboardInterface {

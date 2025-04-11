@@ -1,4 +1,4 @@
-import { KillRing } from './killRing';
+import { KillRing } from '../src/killRing';
 
 export class TestKillRing extends KillRing {
   constructor(maxSize: number = 60, clipboard: Clipboard = navigator.clipboard) {

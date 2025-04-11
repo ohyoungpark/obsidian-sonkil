@@ -28,6 +28,11 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 - `C-g`: Cancel current operation (mark, yank mode)
 - `ESC`: Same as `C-g` but maintains ESC state for additional operations
 
+### Line Movement
+
+- `Ctrl + Cmd + Arrow Up`: Move the current line up
+- `Ctrl + Cmd + Arrow Down`: Move the current line down
+
 ## Installation
 
 ### For Regular Users

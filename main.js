@@ -22,7 +22,7 @@ var __copyProps = (to, from, except, desc) => {
 };
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
 
-// main.ts
+// src/main.ts
 var main_exports = {};
 __export(main_exports, {
   default: () => SonkilPlugin
@@ -31,7 +31,7 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 var import_view = require("@codemirror/view");
 
-// killRing.ts
+// src/killRing.ts
 var KillRing = class {
   constructor(maxSize = 60, clipboard = navigator.clipboard) {
     this.items = [];
@@ -70,7 +70,7 @@ var KillRing = class {
   }
 };
 
-// RecenterCursorPlugin.ts
+// src/RecenterCursorPlugin.ts
 var RecenterCursorPlugin = class {
   constructor() {
     this.modes = ["center", "start", "end"];
@@ -88,7 +88,7 @@ var RecenterCursorPlugin = class {
   }
 };
 
-// main.ts
+// src/main.ts
 var DEFAULT_KILL_RING_SIZE = 60;
 var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
@@ -188,6 +188,28 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
           return true;
         },
         description: "Recenter editor",
+        isCommand: true
+      },
+      {
+        key: "ArrowUp",
+        code: "ArrowUp",
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
+        action: (editor) => {
+          this.moveLineUp(editor);
+          return true;
+        },
+        description: "Move line up",
+        isCommand: true
+      },
+      {
+        key: "ArrowDown",
+        code: "ArrowDown",
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
+        action: (editor) => {
+          this.moveLineDown(editor);
+          return true;
+        },
+        description: "Move line down",
         isCommand: true
       }
     ];
@@ -354,6 +376,12 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         x: "nearest"
       })
     });
+  }
+  moveLineUp(editor) {
+    editor.exec("swapLineUp");
+  }
+  moveLineDown(editor) {
+    editor.exec("swapLineDown");
   }
 };
 var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {
