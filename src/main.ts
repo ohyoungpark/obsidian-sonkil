@@ -23,6 +23,7 @@ export interface ConfigChangeHandler {
 export default class SonkilPlugin extends Plugin implements ConfigChangeHandler {
   protected yankPosition: EditorPosition | null;
   protected markPosition: EditorPosition | null;
+  protected mainCursorPosition: EditorPosition | null;
   private keyBindings: KeyBinding[];
   private recenterPlugin = new RecenterCursorPlugin();
   killRing: KillRing;
@@ -32,6 +33,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     super(app, manifest);
     this.yankPosition = null;
     this.markPosition = null;
+    this.mainCursorPosition = null;
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE,
     };
@@ -43,8 +45,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'g',
         code: 'KeyG',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: () => {
-          this.keyboardQuit();
+        action: (editor: Editor) => {
+          this.modeQuit(editor);
           return true;
         },
         description: 'Cancel mark and exit yank mode',
@@ -54,8 +56,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'Escape',
         code: 'Escape',
         modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
-        action: () => {
-          this.keyboardQuit();
+        action: (editor: Editor) => {
+          this.modeQuit(editor);
           return false;
         },
         description: 'Cancel mark and exit yank mode (with ESC state)',
@@ -150,6 +152,28 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         description: 'Move line down',
         isCommand: true,
       },
+      {
+        key: 'ArrowUp',
+        code: 'ArrowUp',
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
+        action: (editor: Editor) => {
+          this.addCursorUp(editor);
+          return true;
+        },
+        description: 'Add cursor up',
+        isCommand: true,
+      },
+      {
+        key: 'ArrowDown',
+        code: 'ArrowDown',
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
+        action: (editor: Editor) => {
+          this.addCursorDown(editor);
+          return true;
+        },
+        description: 'Add cursor down',
+        isCommand: true,
+      },
     ];
   }
 
@@ -179,6 +203,16 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
       },
       true
     );
+
+    this.registerDomEvent(document, 'mousedown', () => {
+      const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+      if (view) {
+        const editor = view.editor;
+        setTimeout(() => {
+          this.modeQuit(editor);
+        }, 10);
+      }
+    });
 
     // Automatically register commands from key bindings
     this.keyBindings.forEach((binding) => {
@@ -268,10 +302,11 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     }
   }
 
-  keyboardQuit(): void {
+  modeQuit(editor: Editor): void {
     this.markPosition = null;
     this.yankPosition = null;
     this.recenterPlugin.reset();
+    this.resetMultiCursors(editor);
   }
 
   handleKeyEvent(evt: KeyboardEvent): boolean {
@@ -316,6 +351,11 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     this.markPosition = null;
     this.yankPosition = null;
     this.recenterPlugin.reset();
+
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view) {
+      this.resetMultiCursors(view.editor);
+    }
   }
 
   async loadConfig() {
@@ -365,6 +405,54 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
   private moveLineDown(editor: Editor): void {
     editor.exec('swapLineDown');
+  }
+
+  private addCursorUp(editor: Editor): void {
+    this.addCursor(editor, 'up');
+  }
+
+  private addCursorDown(editor: Editor): void {
+    this.addCursor(editor, 'down');
+  }
+
+  private addCursor(editor: Editor, direction: 'up' | 'down'): void {
+    const cursors = editor.listSelections();
+
+    let currentLine: number;
+
+    if (direction === 'up') {
+      currentLine = cursors[0].anchor.line - 1;
+    } else {
+      currentLine = cursors[cursors.length - 1].anchor.line + 1;
+    }
+
+    if (currentLine < 0) {
+      return;
+    } else if (currentLine >= editor.lineCount()) {
+      return;
+    }
+
+    if (!this.mainCursorPosition) {
+      this.mainCursorPosition = editor.getCursor();
+    }
+
+    const newCursor = {
+      line: currentLine,
+      ch: Math.min(
+        this.mainCursorPosition.ch,
+        editor.getLine(currentLine).length
+      ),
+    };
+
+    cursors.push({anchor: newCursor, head: newCursor});
+    editor.setSelections(cursors);
+  }
+
+  private resetMultiCursors(editor: Editor): void {
+    if (this.mainCursorPosition) {
+      editor.setCursor(this.mainCursorPosition);
+      this.mainCursorPosition = null;
+    }
   }
 }
 

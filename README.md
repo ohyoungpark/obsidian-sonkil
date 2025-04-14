@@ -33,6 +33,12 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 - `Ctrl + Cmd + Arrow Up`: Move the current line up
 - `Ctrl + Cmd + Arrow Down`: Move the current line down
 
+### Multi-Cursor
+
+- `Ctrl + Shift + Arrow Up`: Add a cursor on the line above
+- `Ctrl + Shift + Arrow Down`: Add a cursor on the line below
+- `C-g` or mouse click: Reset multi-cursors to primary cursor
+
 ## Installation
 
 ### For Regular Users

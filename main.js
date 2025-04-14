@@ -96,6 +96,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     this.recenterPlugin = new RecenterCursorPlugin();
     this.yankPosition = null;
     this.markPosition = null;
+    this.mainCursorPosition = null;
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE
     };
@@ -105,8 +106,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "g",
         code: "KeyG",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: () => {
-          this.keyboardQuit();
+        action: (editor) => {
+          this.modeQuit(editor);
           return true;
         },
         description: "Cancel mark and exit yank mode",
@@ -116,8 +117,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "Escape",
         code: "Escape",
         modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
-        action: () => {
-          this.keyboardQuit();
+        action: (editor) => {
+          this.modeQuit(editor);
           return false;
         },
         description: "Cancel mark and exit yank mode (with ESC state)",
@@ -211,6 +212,28 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         },
         description: "Move line down",
         isCommand: true
+      },
+      {
+        key: "ArrowUp",
+        code: "ArrowUp",
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
+        action: (editor) => {
+          this.addCursorUp(editor);
+          return true;
+        },
+        description: "Add cursor up",
+        isCommand: true
+      },
+      {
+        key: "ArrowDown",
+        code: "ArrowDown",
+        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
+        action: (editor) => {
+          this.addCursorDown(editor);
+          return true;
+        },
+        description: "Add cursor down",
+        isCommand: true
       }
     ];
   }
@@ -234,6 +257,15 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       },
       true
     );
+    this.registerDomEvent(document, "mousedown", () => {
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+      if (view) {
+        const editor = view.editor;
+        setTimeout(() => {
+          this.modeQuit(editor);
+        }, 10);
+      }
+    });
     this.keyBindings.forEach((binding) => {
       const commandId = `sonkil-${binding.description.toLowerCase().replace(/\s+/g, "-")}`;
       const commandName = `${binding.description} (${binding.modifiers.ctrlKey ? "C-" : ""}${binding.modifiers.altKey ? "M-" : ""}${binding.key})`;
@@ -301,10 +333,11 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       editor.replaceSelection(currentItem);
     }
   }
-  keyboardQuit() {
+  modeQuit(editor) {
     this.markPosition = null;
     this.yankPosition = null;
     this.recenterPlugin.reset();
+    this.resetMultiCursors(editor);
   }
   handleKeyEvent(evt) {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -341,6 +374,10 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     this.markPosition = null;
     this.yankPosition = null;
     this.recenterPlugin.reset();
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    if (view) {
+      this.resetMultiCursors(view.editor);
+    }
   }
   async loadConfig() {
     const loadedData = await this.loadData();
@@ -382,6 +419,44 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   }
   moveLineDown(editor) {
     editor.exec("swapLineDown");
+  }
+  addCursorUp(editor) {
+    this.addCursor(editor, "up");
+  }
+  addCursorDown(editor) {
+    this.addCursor(editor, "down");
+  }
+  addCursor(editor, direction) {
+    const cursors = editor.listSelections();
+    let currentLine;
+    if (direction === "up") {
+      currentLine = cursors[0].anchor.line - 1;
+    } else {
+      currentLine = cursors[cursors.length - 1].anchor.line + 1;
+    }
+    if (currentLine < 0) {
+      return;
+    } else if (currentLine >= editor.lineCount()) {
+      return;
+    }
+    if (!this.mainCursorPosition) {
+      this.mainCursorPosition = editor.getCursor();
+    }
+    const newCursor = {
+      line: currentLine,
+      ch: Math.min(
+        this.mainCursorPosition.ch,
+        editor.getLine(currentLine).length
+      )
+    };
+    cursors.push({ anchor: newCursor, head: newCursor });
+    editor.setSelections(cursors);
+  }
+  resetMultiCursors(editor) {
+    if (this.mainCursorPosition) {
+      editor.setCursor(this.mainCursorPosition);
+      this.mainCursorPosition = null;
+    }
   }
 };
 var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {

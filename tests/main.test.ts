@@ -283,7 +283,7 @@ describe('SonkilPlugin', () => {
     });
   });
 
-  describe('keyboardQuit', () => {
+  describe('modeQuit', () => {
     it('should clear mark position when C-g is called', () => {
       // Given
       plugin.setMarkPosition({ line: 5, ch: 10 });
@@ -319,21 +319,6 @@ describe('SonkilPlugin', () => {
       expect(plugin.getMarkPosition()).toBeNull();
       expect(shouldBlockEvent).toBe(false);
     });
-
-    it('should exit yank mode when C-g is called', () => {
-      // Given
-      plugin.setYankPosition({
-        line: 0,
-        ch: 5,
-      });
-
-      // When
-      plugin.keyboardQuit();
-
-      // Then
-      expect(plugin.getYankPosition()).toBeNull();
-    });
-
   });
 
   describe('handleKeyEvent', () => {
@@ -506,15 +491,13 @@ describe('SonkilPlugin', () => {
         ch: 4,
       });
 
-      // Mock the keyboardQuit method
-      plugin.keyboardQuit = jest.fn().mockReturnValue(true);
-
       // When
       const result = plugin.handleKeyEvent(event);
 
       // Then
       expect(result).toBe(true);
-      expect(plugin.keyboardQuit).toHaveBeenCalled();
+      expect(plugin.getMarkPosition()).toBeNull();
+      expect(plugin.getYankPosition()).toBeNull();
     });
 
     it('should not handle unknown key combinations', () => {
