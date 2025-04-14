@@ -96,11 +96,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     this.recenterPlugin = new RecenterCursorPlugin();
     this.positions = {
       yank: null,
-      // yank position
       mark: null,
-      // mark position
       main: null
-      // main cursor position for multi-cursor
     };
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE
