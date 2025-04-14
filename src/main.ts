@@ -388,6 +388,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) return;
 
+    // Obsidian's Editor has an internal cm property that's not exposed in the type definitions
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cmView = (editor as any).cm as EditorView;
     if (!cmView) return;
 
