@@ -21,19 +21,23 @@ export interface ConfigChangeHandler {
 }
 
 export default class SonkilPlugin extends Plugin implements ConfigChangeHandler {
-  protected yankPosition: EditorPosition | null;
-  protected markPosition: EditorPosition | null;
-  protected mainCursorPosition: EditorPosition | null;
   private keyBindings: KeyBinding[];
   private recenterPlugin = new RecenterCursorPlugin();
   killRing: KillRing;
   config: SonkilConfig;
+  protected positions: {
+    yank: EditorPosition | null;
+    mark: EditorPosition | null;
+    main: EditorPosition | null;  // main cursor position for multi-cursor
+  };
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.yankPosition = null;
-    this.markPosition = null;
-    this.mainCursorPosition = null;
+    this.positions = {
+      yank: null,
+      mark: null,
+      main: null,
+    };
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE,
     };
@@ -68,7 +72,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         code: 'Space',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.markPosition = editor.getCursor();
+          this.positions.mark = editor.getCursor();
           return true;
         },
         description: 'Set mark',
@@ -101,7 +105,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         code: 'KeyY',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.yankPosition = null; // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
+          this.positions.yank = null;  // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
           this.yank(editor);
           return true;
         },
@@ -260,8 +264,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   }
 
   killRegion(editor: Editor) {
-    if (this.markPosition) {
-      const from = this.markPosition;
+    if (this.positions.mark) {
+      const from = this.positions.mark;
       const to = editor.getCursor();
 
       const [start, end] = this.sortPositions(from, to);
@@ -269,7 +273,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
       this.killRing.add(text);
       editor.replaceRange('', start, end);
-      this.markPosition = null;
+      this.positions.mark = null;
     } else {
       const selection = editor.getSelection();
       if (selection) {
@@ -289,22 +293,22 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
     const cursorPostion: EditorPosition = editor.getCursor();
 
-    if (!this.yankPosition) {
-      this.yankPosition = cursorPostion;
+    if (!this.positions.yank) {
+      this.positions.yank = cursorPostion;
     } else {
       this.killRing.decreaseCurrentIndex();
     }
 
     const currentItem = this.killRing.getCurrentItem();
     if (currentItem) {
-      editor.setSelection(this.yankPosition, cursorPostion);
+      editor.setSelection(this.positions.yank, cursorPostion);
       editor.replaceSelection(currentItem);
     }
   }
 
   modeQuit(editor: Editor): void {
-    this.markPosition = null;
-    this.yankPosition = null;
+    this.positions.mark = null;
+    this.positions.yank = null;
     this.recenterPlugin.reset();
     this.resetMultiCursors(editor);
   }
@@ -324,8 +328,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     }
 
     if (!['Control', 'Alt'].includes(evt.key)) {
-      if (this.yankPosition) {
-        this.yankPosition = null;
+      if (this.positions.yank) {
+        this.positions.yank = null;
       }
       this.recenterPlugin.reset();
     }
@@ -348,8 +352,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   }
 
   onunload() {
-    this.markPosition = null;
-    this.yankPosition = null;
+    this.positions.mark = null;
+    this.positions.yank = null;
     this.recenterPlugin.reset();
 
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -432,14 +436,14 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
       return;
     }
 
-    if (!this.mainCursorPosition) {
-      this.mainCursorPosition = editor.getCursor();
+    if (!this.positions.main) {
+      this.positions.main = editor.getCursor();
     }
 
     const newCursor = {
       line: currentLine,
       ch: Math.min(
-        this.mainCursorPosition.ch,
+        this.positions.main.ch,
         editor.getLine(currentLine).length
       ),
     };
@@ -449,9 +453,9 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   }
 
   private resetMultiCursors(editor: Editor): void {
-    if (this.mainCursorPosition) {
-      editor.setCursor(this.mainCursorPosition);
-      this.mainCursorPosition = null;
+    if (this.positions.main) {
+      editor.setCursor(this.positions.main);
+      this.positions.main = null;
     }
   }
 }

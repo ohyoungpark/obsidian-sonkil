@@ -28,19 +28,19 @@ class MockClipboard implements ClipboardInterface {
 
 class TestSonkilPlugin extends SonkilPlugin {
   getMarkPosition(): EditorPosition | null {
-    return this.markPosition;
+    return this.positions.mark;
   }
 
   getYankPosition(): EditorPosition | null {
-    return this.yankPosition;
+    return this.positions.yank;
   }
 
   setYankPosition(position: EditorPosition | null): void {
-    this.yankPosition = position;
+    this.positions.yank = position;
   }
 
   setMarkPosition(position: EditorPosition | null): void {
-    this.markPosition = position;
+    this.positions.mark = position;
   }
 
   killRing: TestKillRing;

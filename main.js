@@ -94,9 +94,14 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
     this.recenterPlugin = new RecenterCursorPlugin();
-    this.yankPosition = null;
-    this.markPosition = null;
-    this.mainCursorPosition = null;
+    this.positions = {
+      yank: null,
+      // yank position
+      mark: null,
+      // mark position
+      main: null
+      // main cursor position for multi-cursor
+    };
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE
     };
@@ -129,7 +134,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         code: "Space",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.markPosition = editor.getCursor();
+          this.positions.mark = editor.getCursor();
           return true;
         },
         description: "Set mark",
@@ -162,7 +167,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         code: "KeyY",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.yankPosition = null;
+          this.positions.yank = null;
           this.yank(editor);
           return true;
         },
@@ -298,14 +303,14 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     editor.replaceRange("", cursorPosition, lastCharPosition);
   }
   killRegion(editor) {
-    if (this.markPosition) {
-      const from = this.markPosition;
+    if (this.positions.mark) {
+      const from = this.positions.mark;
       const to = editor.getCursor();
       const [start, end] = this.sortPositions(from, to);
       const text = editor.getRange(start, end);
       this.killRing.add(text);
       editor.replaceRange("", start, end);
-      this.markPosition = null;
+      this.positions.mark = null;
     } else {
       const selection = editor.getSelection();
       if (selection) {
@@ -322,20 +327,20 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       }
     }
     const cursorPostion = editor.getCursor();
-    if (!this.yankPosition) {
-      this.yankPosition = cursorPostion;
+    if (!this.positions.yank) {
+      this.positions.yank = cursorPostion;
     } else {
       this.killRing.decreaseCurrentIndex();
     }
     const currentItem = this.killRing.getCurrentItem();
     if (currentItem) {
-      editor.setSelection(this.yankPosition, cursorPostion);
+      editor.setSelection(this.positions.yank, cursorPostion);
       editor.replaceSelection(currentItem);
     }
   }
   modeQuit(editor) {
-    this.markPosition = null;
-    this.yankPosition = null;
+    this.positions.mark = null;
+    this.positions.yank = null;
     this.recenterPlugin.reset();
     this.resetMultiCursors(editor);
   }
@@ -352,8 +357,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       }
     }
     if (!["Control", "Alt"].includes(evt.key)) {
-      if (this.yankPosition) {
-        this.yankPosition = null;
+      if (this.positions.yank) {
+        this.positions.yank = null;
       }
       this.recenterPlugin.reset();
     }
@@ -371,8 +376,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     return keyMatches && modifiersMatch;
   }
   onunload() {
-    this.markPosition = null;
-    this.yankPosition = null;
+    this.positions.mark = null;
+    this.positions.yank = null;
     this.recenterPlugin.reset();
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     if (view) {
@@ -439,13 +444,13 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     } else if (currentLine >= editor.lineCount()) {
       return;
     }
-    if (!this.mainCursorPosition) {
-      this.mainCursorPosition = editor.getCursor();
+    if (!this.positions.main) {
+      this.positions.main = editor.getCursor();
     }
     const newCursor = {
       line: currentLine,
       ch: Math.min(
-        this.mainCursorPosition.ch,
+        this.positions.main.ch,
         editor.getLine(currentLine).length
       )
     };
@@ -453,9 +458,9 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     editor.setSelections(cursors);
   }
   resetMultiCursors(editor) {
-    if (this.mainCursorPosition) {
-      editor.setCursor(this.mainCursorPosition);
-      this.mainCursorPosition = null;
+    if (this.positions.main) {
+      editor.setCursor(this.positions.main);
+      this.positions.main = null;
     }
   }
 };
