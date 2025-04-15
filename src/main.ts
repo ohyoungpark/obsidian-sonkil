@@ -2,10 +2,12 @@ import {
   App,
   Editor,
   EditorPosition,
+  Hotkey,
   MarkdownView,
   Plugin,
   PluginSettingTab,
   Setting,
+  Modifier,
 } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 
@@ -14,6 +16,16 @@ import { KillRing } from './killRing';
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
 
 const DEFAULT_KILL_RING_SIZE = 60;
+const KeyToCodeMap: Record<string, string> = {
+  ' ': 'Space',
+  'g': 'KeyG',
+  'k': 'KeyK',
+  'w': 'KeyW',
+  'y': 'KeyY',
+  'l': 'KeyL',
+  'ArrowUp': 'ArrowUp',
+  'ArrowDown': 'ArrowDown',
+};
 
 export interface ConfigChangeHandler {
   setKillRingMaxSize(size: number): Promise<void>;
@@ -47,62 +59,42 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     this.keyBindings = [
       {
         key: 'g',
-        code: 'KeyG',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.modeQuit(editor);
           return true;
         },
         description: 'Cancel mark and exit yank mode',
-        isCommand: false,
-      },
-      {
-        key: 'Escape',
-        code: 'Escape',
-        modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor: Editor) => {
-          this.modeQuit(editor);
-          return false;
-        },
-        description: 'Cancel mark and exit yank mode (with ESC state)',
-        isCommand: false,
       },
       {
         key: ' ',
-        code: 'Space',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.positions.mark = editor.getCursor();
           return true;
         },
         description: 'Set mark',
-        isCommand: true,
       },
       {
         key: 'k',
-        code: 'KeyK',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.killLine(editor);
           return true;
         },
         description: 'Kill line',
-        isCommand: true,
       },
       {
         key: 'w',
-        code: 'KeyW',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.killRegion(editor);
           return true;
         },
         description: 'Kill region',
-        isCommand: true,
       },
       {
         key: 'y',
-        code: 'KeyY',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.positions.yank = null;  // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
@@ -110,73 +102,60 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
           return true;
         },
         description: 'Yank',
-        isCommand: true,
       },
       {
         key: 'y',
-        code: 'KeyY',
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.yank(editor);
           return true;
         },
         description: 'Yank pop',
-        isCommand: true,
       },
       {
         key: 'l',
-        code: 'KeyL',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
           this.recenterEditor(editor);
           return true;
         },
         description: 'Recenter editor',
-        isCommand: true,
       },
       {
         key: 'ArrowUp',
-        code: 'ArrowUp',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor: Editor) => {
           this.moveLineUp(editor);
           return true;
         },
         description: 'Move line up',
-        isCommand: true,
       },
       {
         key: 'ArrowDown',
-        code: 'ArrowDown',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor: Editor) => {
           this.moveLineDown(editor);
           return true;
         },
         description: 'Move line down',
-        isCommand: true,
       },
       {
         key: 'ArrowUp',
-        code: 'ArrowUp',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor: Editor) => {
           this.addCursorUp(editor);
           return true;
         },
         description: 'Add cursor up',
-        isCommand: true,
       },
       {
         key: 'ArrowDown',
-        code: 'ArrowDown',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor: Editor) => {
           this.addCursorDown(editor);
           return true;
         },
         description: 'Add cursor down',
-        isCommand: true,
       },
     ];
   }
@@ -222,21 +201,33 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     this.keyBindings.forEach((binding) => {
       // Generate command ID and display name
       const commandId = `sonkil-${binding.description.toLowerCase().replace(/\s+/g, '-')}`;
-      const commandName = `${binding.description} (${binding.modifiers.ctrlKey ? 'C-' : ''}${binding.modifiers.altKey ? 'M-' : ''}${binding.key})`;
+      const commandName = binding.description;
 
-      if (binding.isCommand) {
-        this.addCommand({
-          id: commandId,
-          name: commandName,
-          editorCallback: (editor: Editor) => {
-            binding.action(editor);
-          },
-        });
-      }
+      this.addCommand({
+        id: commandId,
+        name: commandName,
+        hotkeys: this.keybindingToHotkeys(binding),
+        editorCallback: (editor: Editor) => {
+          binding.action(editor);
+        },
+      });
     });
 
     // Add settings tab
     this.addSettingTab(new SonkilSettingTab(this.app, this));
+  }
+
+  private keybindingToHotkeys(keybinding: KeyBinding): Hotkey[] {
+    const modifiers: Modifier[] = [];
+    if (keybinding.modifiers.ctrlKey) modifiers.push('Mod');
+    if (keybinding.modifiers.altKey) modifiers.push('Alt');
+    if (keybinding.modifiers.shiftKey) modifiers.push('Shift');
+    if (keybinding.modifiers.metaKey) modifiers.push('Meta');
+
+    return [{
+      modifiers,
+      key: keybinding.key
+    }];
   }
 
   private sortPositions(a: EditorPosition, b: EditorPosition): [EditorPosition, EditorPosition] {
@@ -340,8 +331,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   isKeyBindingMatch(evt: KeyboardEvent, binding: KeyBinding): boolean {
     const keyPressed = evt.key.toLowerCase();
     const codePressed = evt.code;
-
-    const keyMatches = codePressed === binding.code || keyPressed === binding.key.toLowerCase();
+    const bindingKey = binding.key.toLowerCase();
+    const keyMatches = codePressed === KeyToCodeMap[bindingKey] || keyPressed === bindingKey;
 
     const modifiersMatch = Object.entries(binding.modifiers).every(([key, value]) => {
       if (value === undefined) return true;

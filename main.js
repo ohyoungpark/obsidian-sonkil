@@ -90,6 +90,16 @@ var RecenterCursorPlugin = class {
 
 // src/main.ts
 var DEFAULT_KILL_RING_SIZE = 60;
+var KeyToCodeMap = {
+  " ": "Space",
+  "g": "KeyG",
+  "k": "KeyK",
+  "w": "KeyW",
+  "y": "KeyY",
+  "l": "KeyL",
+  "ArrowUp": "ArrowUp",
+  "ArrowDown": "ArrowDown"
+};
 var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
@@ -106,136 +116,103 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     this.keyBindings = [
       {
         key: "g",
-        code: "KeyG",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.modeQuit(editor);
           return true;
         },
-        description: "Cancel mark and exit yank mode",
-        isCommand: false
-      },
-      {
-        key: "Escape",
-        code: "Escape",
-        modifiers: { ctrlKey: false, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.modeQuit(editor);
-          return false;
-        },
-        description: "Cancel mark and exit yank mode (with ESC state)",
-        isCommand: false
+        description: "Cancel mark and exit yank mode"
       },
       {
         key: " ",
-        code: "Space",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.positions.mark = editor.getCursor();
           return true;
         },
-        description: "Set mark",
-        isCommand: true
+        description: "Set mark"
       },
       {
         key: "k",
-        code: "KeyK",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.killLine(editor);
           return true;
         },
-        description: "Kill line",
-        isCommand: true
+        description: "Kill line"
       },
       {
         key: "w",
-        code: "KeyW",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.killRegion(editor);
           return true;
         },
-        description: "Kill region",
-        isCommand: true
+        description: "Kill region"
       },
       {
         key: "y",
-        code: "KeyY",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.positions.yank = null;
           this.yank(editor);
           return true;
         },
-        description: "Yank",
-        isCommand: true
+        description: "Yank"
       },
       {
         key: "y",
-        code: "KeyY",
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.yank(editor);
           return true;
         },
-        description: "Yank pop",
-        isCommand: true
+        description: "Yank pop"
       },
       {
         key: "l",
-        code: "KeyL",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
           this.recenterEditor(editor);
           return true;
         },
-        description: "Recenter editor",
-        isCommand: true
+        description: "Recenter editor"
       },
       {
         key: "ArrowUp",
-        code: "ArrowUp",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor) => {
           this.moveLineUp(editor);
           return true;
         },
-        description: "Move line up",
-        isCommand: true
+        description: "Move line up"
       },
       {
         key: "ArrowDown",
-        code: "ArrowDown",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor) => {
           this.moveLineDown(editor);
           return true;
         },
-        description: "Move line down",
-        isCommand: true
+        description: "Move line down"
       },
       {
         key: "ArrowUp",
-        code: "ArrowUp",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor) => {
           this.addCursorUp(editor);
           return true;
         },
-        description: "Add cursor up",
-        isCommand: true
+        description: "Add cursor up"
       },
       {
         key: "ArrowDown",
-        code: "ArrowDown",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor) => {
           this.addCursorDown(editor);
           return true;
         },
-        description: "Add cursor down",
-        isCommand: true
+        description: "Add cursor down"
       }
     ];
   }
@@ -270,18 +247,32 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     });
     this.keyBindings.forEach((binding) => {
       const commandId = `sonkil-${binding.description.toLowerCase().replace(/\s+/g, "-")}`;
-      const commandName = `${binding.description} (${binding.modifiers.ctrlKey ? "C-" : ""}${binding.modifiers.altKey ? "M-" : ""}${binding.key})`;
-      if (binding.isCommand) {
-        this.addCommand({
-          id: commandId,
-          name: commandName,
-          editorCallback: (editor) => {
-            binding.action(editor);
-          }
-        });
-      }
+      const commandName = binding.description;
+      this.addCommand({
+        id: commandId,
+        name: commandName,
+        hotkeys: this.keybindingToHotkeys(binding),
+        editorCallback: (editor) => {
+          binding.action(editor);
+        }
+      });
     });
     this.addSettingTab(new SonkilSettingTab(this.app, this));
+  }
+  keybindingToHotkeys(keybinding) {
+    const modifiers = [];
+    if (keybinding.modifiers.ctrlKey)
+      modifiers.push("Mod");
+    if (keybinding.modifiers.altKey)
+      modifiers.push("Alt");
+    if (keybinding.modifiers.shiftKey)
+      modifiers.push("Shift");
+    if (keybinding.modifiers.metaKey)
+      modifiers.push("Meta");
+    return [{
+      modifiers,
+      key: keybinding.key
+    }];
   }
   sortPositions(a, b) {
     return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
@@ -364,7 +355,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   isKeyBindingMatch(evt, binding) {
     const keyPressed = evt.key.toLowerCase();
     const codePressed = evt.code;
-    const keyMatches = codePressed === binding.code || keyPressed === binding.key.toLowerCase();
+    const bindingKey = binding.key.toLowerCase();
+    const keyMatches = codePressed === KeyToCodeMap[bindingKey] || keyPressed === bindingKey;
     const modifiersMatch = Object.entries(binding.modifiers).every(([key, value]) => {
       if (value === void 0)
         return true;

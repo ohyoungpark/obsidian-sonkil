@@ -302,23 +302,6 @@ describe('SonkilPlugin', () => {
       expect(shouldBlockEvent).toBe(true);
     });
 
-    it('should clear mark position when ESC is called', () => {
-      // Given
-      plugin.setMarkPosition({ line: 5, ch: 10 });
-
-      // When
-      const event = new KeyboardEvent('keydown', {
-        key: 'Escape',
-        code: 'Escape',
-        ctrlKey: false,
-        altKey: false
-      });
-      const shouldBlockEvent = plugin.handleKeyEvent(event);
-
-      // Then
-      expect(plugin.getMarkPosition()).toBeNull();
-      expect(shouldBlockEvent).toBe(false);
-    });
   });
 
   describe('handleKeyEvent', () => {

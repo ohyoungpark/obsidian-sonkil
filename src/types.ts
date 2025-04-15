@@ -8,7 +8,6 @@ export interface ModifierKey {
 }
 
 export interface KeyEvent {
-  code: string;
   key: string;
   modifiers: ModifierKey;
 }
@@ -16,7 +15,6 @@ export interface KeyEvent {
 export interface KeyBinding extends KeyEvent {
   action: (editor: ObsidianEditor) => boolean;
   description: string;
-  isCommand: boolean;
 }
 
 export interface SonkilConfig {
