@@ -1,43 +1,37 @@
 # Sonkil - Emacs-style Text Operations for Obsidian
 
-Sonkil is an Obsidian plugin that provides Emacs-style text manipulation features. It brings the powerful text editing capabilities of Emacs to Obsidian.
+Sonkil is an Obsidian plugin that provides Emacs-style text manipulation features with additional enhancements. It brings the powerful text editing capabilities of Emacs to Obsidian while adding some modern features tailored for note-taking.
 
-## Key Features
+## Features
 
-### Text Manipulation
+### Core Emacs-Style Features
 
-- `C-Space`: Set mark at current cursor position
-- `C-k`: Cut text from cursor position to end of line (Kill Line)
-- `C-w`: Cut text between mark and cursor (Kill Region)
-- `M-w`: Copy text between mark and cursor (Copy Region)
-- `C-l`: Recenter editor view (Center/Start/End)
+| Keystroke | Description |
+|-----------|-------------|
+| `C-Space` | Set mark at current cursor position |
+| `C-k` | Cut text from cursor position to end of line (Kill Line) |
+| `C-w` | Cut text between mark and cursor (Kill Region) |
+| `M-w` | Copy text between mark and cursor (Copy Region) |
+| `C-y` | Paste most recent text from kill ring (Yank) |
+| `M-y` | Cycle through previously cut text after yank (Yank Pop) |
+| `C-l` | Recenter editor view (cycles through Center/Top/Bottom) |
+| `C-g` | Cancel current operation (mark, yank mode, multi-cursor) |
+| `ESC` | Same as `C-g` but maintains ESC state for additional operations |
 
-### Kill Ring
+### Enhanced Features
 
-- `C-y`: Paste most recent text from kill ring (Yank)
-- `M-y`: Cycle through previously cut text after yank (Yank Pop)
-- Maximum number of kill ring entries: 60
+| Keystroke | Description |
+|-----------|-------------|
+| `Ctrl + Cmd + ↑` | Move the current line up (macOS) |
+| `Ctrl + Cmd + ↓` | Move the current line down (macOS) |
+| `Ctrl + Shift + ↑` | Add a cursor on the line above |
+| `Ctrl + Shift + ↓` | Add a cursor on the line below |
 
 ### Clipboard Integration
 
-- When kill ring is empty, `C-y` will import content from system clipboard into kill ring
-- Cut/copied text is automatically copied to system clipboard
-
-### Cancel Operations
-
-- `C-g`: Cancel current operation (mark, yank mode)
-- `ESC`: Same as `C-g` but maintains ESC state for additional operations
-
-### Line Movement
-
-- `Ctrl + Cmd + Arrow Up`: Move the current line up
-- `Ctrl + Cmd + Arrow Down`: Move the current line down
-
-### Multi-Cursor
-
-- `Ctrl + Shift + Arrow Up`: Add a cursor on the line above
-- `Ctrl + Shift + Arrow Down`: Add a cursor on the line below
-- `C-g` or mouse click: Reset multi-cursors to primary cursor
+- Kill ring with max 60 entries
+- When kill ring is empty, `C-y` will import content from system clipboard
+- Cut/copied text is automatically synced with system clipboard
 
 ## Installation
 
