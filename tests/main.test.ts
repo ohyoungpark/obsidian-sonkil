@@ -236,6 +236,57 @@ describe('SonkilPlugin', () => {
       expect(plugin.killRing.getCurrentItem()).toContain('Hello');
     });
 
+    it('should copy region from mark to cursor when M-w is pressed (without deleting text)', () => {
+      // Given
+      plugin.setMarkPosition({ line: 0, ch: 0 });
+      editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
+      editor.getLine = jest.fn().mockReturnValue('Hello, world!');
+      editor.getRange = jest.fn().mockReturnValue('Hello');
+
+      // When
+      plugin.killRegion(editor as any, true);
+
+      // Then
+      expect(editor.replaceRange).not.toHaveBeenCalled();
+      expect(plugin.killRing.getCurrentItem()).toContain('Hello');
+      expect(plugin.getMarkPosition()).toBeNull();
+    });
+
+    it('should handle Alt+W key event to copy region', () => {
+      // Given
+      const event = new KeyboardEvent('keydown', {
+        key: 'w',
+        code: 'KeyW',
+        ctrlKey: false,
+        altKey: true,
+      });
+      plugin.setMarkPosition({ line: 0, ch: 0 });
+      editor.getCursor = jest.fn().mockReturnValue({ line: 0, ch: 5 });
+      editor.getLine = jest.fn().mockReturnValue('Hello, world!');
+      editor.getRange = jest.fn().mockReturnValue('Hello');
+
+      // When
+      const result = plugin.handleKeyEvent(event);
+
+      // Then
+      expect(result).toBe(true);
+      expect(editor.replaceRange).not.toHaveBeenCalled();
+      expect(plugin.killRing.getCurrentItem()).toContain('Hello');
+    });
+
+    it('should copy selected text without deleting when M-w is pressed without mark', () => {
+      // Given
+      plugin.setMarkPosition(null);
+      editor.getSelection = jest.fn().mockReturnValue('Selected text');
+
+      // When
+      plugin.killRegion(editor as any, true);
+
+      // Then
+      expect(editor.replaceSelection).not.toHaveBeenCalled();
+      expect(plugin.killRing.getCurrentItem()).toContain('Selected text');
+    });
+
     it('should handle multi-line region kill', () => {
       // Given
       plugin.setMarkPosition({ line: 0, ch: 0 });

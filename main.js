@@ -151,6 +151,15 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         description: "Kill region"
       },
       {
+        key: "w",
+        modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
+        action: (editor) => {
+          this.killRegion(editor, true);
+          return true;
+        },
+        description: "Copy region"
+      },
+      {
         key: "y",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
@@ -290,20 +299,24 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     const lastCharPosition = { line: cursorPosition.line, ch: line.length };
     editor.replaceRange("", cursorPosition, lastCharPosition);
   }
-  killRegion(editor) {
+  killRegion(editor, copyOnly = false) {
     if (this.positions.mark) {
       const from = this.positions.mark;
       const to = editor.getCursor();
       const [start, end] = this.sortPositions(from, to);
       const text = editor.getRange(start, end);
       this.killRing.add(text);
-      editor.replaceRange("", start, end);
+      if (!copyOnly) {
+        editor.replaceRange("", start, end);
+      }
       this.positions.mark = null;
     } else {
       const selection = editor.getSelection();
       if (selection) {
         this.killRing.add(selection);
-        editor.replaceSelection("");
+        if (!copyOnly) {
+          editor.replaceSelection("");
+        }
       }
     }
   }

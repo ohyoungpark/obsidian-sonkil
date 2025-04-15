@@ -94,6 +94,15 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         description: 'Kill region',
       },
       {
+        key: 'w',
+        modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
+        action: (editor: Editor) => {
+          this.killRegion(editor, true);
+          return true;
+        },
+        description: 'Copy region',
+      },
+      {
         key: 'y',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
@@ -254,7 +263,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     editor.replaceRange('', cursorPosition, lastCharPosition);
   }
 
-  killRegion(editor: Editor) {
+  killRegion(editor: Editor, copyOnly: boolean = false) {
     if (this.positions.mark) {
       const from = this.positions.mark;
       const to = editor.getCursor();
@@ -263,13 +272,17 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
       const text = editor.getRange(start, end);
 
       this.killRing.add(text);
-      editor.replaceRange('', start, end);
+      if (!copyOnly) {
+        editor.replaceRange('', start, end);
+      }
       this.positions.mark = null;
     } else {
       const selection = editor.getSelection();
       if (selection) {
         this.killRing.add(selection);
-        editor.replaceSelection('');
+        if (!copyOnly) {
+          editor.replaceSelection('');
+        }
       }
     }
   }
