@@ -16,14 +16,13 @@ Sonkil is an Obsidian plugin that provides Emacs-style text manipulation feature
 | `M-y` | Cycle through previously cut text after yank (Yank Pop) |
 | `C-l` | Recenter editor view (cycles through Center/Top/Bottom) |
 | `C-g` | Cancel current operation (mark, yank mode, multi-cursor) |
-| `ESC` | Same as `C-g` but maintains ESC state for additional operations |
 
 ### Enhanced Features
 
 | Keystroke | Description |
 |-----------|-------------|
-| `Ctrl + Cmd + ↑` | Move the current line up (macOS) |
-| `Ctrl + Cmd + ↓` | Move the current line down (macOS) |
+| `Ctrl + Alt + ↑` | Move the current line up |
+| `Ctrl + Alt + ↓` | Move the current line down |
 | `Ctrl + Shift + ↑` | Add a cursor on the line above |
 | `Ctrl + Shift + ↓` | Add a cursor on the line below |
 
