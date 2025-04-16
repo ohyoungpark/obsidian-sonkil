@@ -12,8 +12,8 @@ import {
 import { EditorView } from '@codemirror/view';
 
 import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
-import { KillRing } from './killRing';
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
+import { KillAndYankPlugin } from './killAndYankPlugin';
 
 const DEFAULT_KILL_RING_SIZE = 60;
 const KeyToCodeMap: Record<string, string> = {
@@ -35,25 +35,21 @@ export interface ConfigChangeHandler {
 export default class SonkilPlugin extends Plugin implements ConfigChangeHandler {
   private keyBindings: KeyBinding[];
   private recenterPlugin = new RecenterCursorPlugin();
-  killRing: KillRing;
+  private killAndYankPlugin: KillAndYankPlugin;
   config: SonkilConfig;
   protected positions: {
-    yank: EditorPosition | null;
-    mark: EditorPosition | null;
     main: EditorPosition | null;  // main cursor position for multi-cursor
   };
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
     this.positions = {
-      yank: null,
-      mark: null,
       main: null,
     };
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE,
     };
-    this.killRing = new KillRing(DEFAULT_KILL_RING_SIZE);
+    this.killAndYankPlugin = new KillAndYankPlugin(DEFAULT_KILL_RING_SIZE);
 
     // Key binding definitions
     this.keyBindings = [
@@ -70,7 +66,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: ' ',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.positions.mark = editor.getCursor();
+          this.killAndYankPlugin.setMark(editor);
           return true;
         },
         description: 'Set mark',
@@ -79,7 +75,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'k',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.killLine(editor);
+          this.killAndYankPlugin.killLine(editor);
           return true;
         },
         description: 'Kill line',
@@ -88,7 +84,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'w',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.killRegion(editor);
+          this.killAndYankPlugin.killRegion(editor);
           return true;
         },
         description: 'Kill region',
@@ -97,7 +93,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'w',
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.killRegion(editor, true);
+          this.killAndYankPlugin.copyRegion(editor);
           return true;
         },
         description: 'Copy region',
@@ -106,8 +102,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'y',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.positions.yank = null;  // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
-          this.yank(editor);
+          this.killAndYankPlugin.resetYankPosition();  // Initialize yankPosition for Ctrl+y to behave differently from Alt+y
+          this.killAndYankPlugin.yank(editor);
           return true;
         },
         description: 'Yank',
@@ -116,7 +112,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'y',
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.yank(editor);
+          this.killAndYankPlugin.yank(editor);
           return true;
         },
         description: 'Yank pop',
@@ -239,80 +235,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     }];
   }
 
-  private sortPositions(a: EditorPosition, b: EditorPosition): [EditorPosition, EditorPosition] {
-    return a.line < b.line || (a.line === b.line && a.ch <= b.ch) ? [a, b] : [b, a];
-  }
-
-  killLine(editor: Editor) {
-    const cursorPosition: EditorPosition = editor.getCursor();
-    const line = editor.getLine(cursorPosition.line);
-
-    // Get text from cursor position to end
-    const text = line.slice(cursorPosition.ch);
-
-    // If line is empty or contains only newline characters
-    if (text.trim() === '') {
-      const nextLineFirstCharPosition: EditorPosition = { line: cursorPosition.line + 1, ch: 0 };
-      editor.replaceRange('', cursorPosition, nextLineFirstCharPosition);
-      return;
-    }
-
-    // Add to killRing and delete text
-    this.killRing.add(text);
-    const lastCharPosition: EditorPosition = { line: cursorPosition.line, ch: line.length };
-    editor.replaceRange('', cursorPosition, lastCharPosition);
-  }
-
-  killRegion(editor: Editor, copyOnly: boolean = false) {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
-      const to = editor.getCursor();
-
-      const [start, end] = this.sortPositions(from, to);
-      const text = editor.getRange(start, end);
-
-      this.killRing.add(text);
-      if (!copyOnly) {
-        editor.replaceRange('', start, end);
-      }
-      this.positions.mark = null;
-    } else {
-      const selection = editor.getSelection();
-      if (selection) {
-        this.killRing.add(selection);
-        if (!copyOnly) {
-          editor.replaceSelection('');
-        }
-      }
-    }
-  }
-
-  async yank(editor: Editor) {
-    if (this.killRing.getCurrentItem() === null) {
-      const clipboardText = await navigator.clipboard.readText();
-      if (clipboardText) {
-        this.killRing.add(clipboardText);
-      }
-    }
-
-    const cursorPostion: EditorPosition = editor.getCursor();
-
-    if (!this.positions.yank) {
-      this.positions.yank = cursorPostion;
-    } else {
-      this.killRing.decreaseCurrentIndex();
-    }
-
-    const currentItem = this.killRing.getCurrentItem();
-    if (currentItem) {
-      editor.setSelection(this.positions.yank, cursorPostion);
-      editor.replaceSelection(currentItem);
-    }
-  }
-
   modeQuit(editor: Editor): void {
-    this.positions.mark = null;
-    this.positions.yank = null;
+    this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
     this.resetMultiCursors(editor);
   }
@@ -332,9 +256,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     }
 
     if (!['Control', 'Alt'].includes(evt.key)) {
-      if (this.positions.yank) {
-        this.positions.yank = null;
-      }
+      this.killAndYankPlugin.resetYankPosition();
       this.recenterPlugin.reset();
     }
 
@@ -356,8 +278,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   }
 
   onunload() {
-    this.positions.mark = null;
-    this.positions.yank = null;
+    this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
 
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
@@ -371,7 +292,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     if (loadedData) {
       this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
     }
-    this.killRing = new KillRing(this.config.killRingMaxSize);
+    this.killAndYankPlugin = new KillAndYankPlugin(this.config.killRingMaxSize);
   }
 
   async saveConfig() {
@@ -380,7 +301,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
   async setKillRingMaxSize(size: number): Promise<void> {
     this.config.killRingMaxSize = size;
-    this.killRing.setMaxSize(size);
+    this.killAndYankPlugin.setKillRingMaxSize(size);
     await this.saveConfig();
   }
 

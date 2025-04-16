@@ -31,6 +31,24 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
 var import_view = require("@codemirror/view");
 
+// src/RecenterCursorPlugin.ts
+var RecenterCursorPlugin = class {
+  constructor() {
+    this.modes = ["center", "start", "end"];
+    this.currentIndex = 0;
+  }
+  getNextMode() {
+    const mode = this.modes[this.currentIndex];
+    this.currentIndex = (this.currentIndex + 1) % this.modes.length;
+    return mode;
+  }
+  reset() {
+    if (this.currentIndex !== 0) {
+      this.currentIndex = 0;
+    }
+  }
+};
+
 // src/killRing.ts
 var KillRing = class {
   constructor(maxSize = 60, clipboard = navigator.clipboard) {
@@ -70,21 +88,98 @@ var KillRing = class {
   }
 };
 
-// src/RecenterCursorPlugin.ts
-var RecenterCursorPlugin = class {
-  constructor() {
-    this.modes = ["center", "start", "end"];
-    this.currentIndex = 0;
+// src/killAndYankPlugin.ts
+var KillAndYankPlugin = class {
+  constructor(maxRingSize = 60) {
+    this.killRing = new KillRing(maxRingSize);
+    this.positions = {
+      mark: null,
+      yank: null
+    };
   }
-  getNextMode() {
-    const mode = this.modes[this.currentIndex];
-    this.currentIndex = (this.currentIndex + 1) % this.modes.length;
-    return mode;
+  setKillRingMaxSize(size) {
+    this.killRing.setMaxSize(size);
+  }
+  sortPositions(a, b) {
+    return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
+  }
+  killLine(editor) {
+    const cursorPosition = editor.getCursor();
+    const line = editor.getLine(cursorPosition.line);
+    const text = line.slice(cursorPosition.ch);
+    if (text.trim() === "") {
+      const nextLineFirstCharPosition = { line: cursorPosition.line + 1, ch: 0 };
+      editor.replaceRange("", cursorPosition, nextLineFirstCharPosition);
+      return;
+    }
+    this.killRing.add(text);
+    const lastCharPosition = { line: cursorPosition.line, ch: line.length };
+    editor.replaceRange("", cursorPosition, lastCharPosition);
+  }
+  killRegion(editor) {
+    if (this.positions.mark) {
+      const from = this.positions.mark;
+      const to = editor.getCursor();
+      const [start, end] = this.sortPositions(from, to);
+      const text = editor.getRange(start, end);
+      this.killRing.add(text);
+      editor.replaceRange("", start, end);
+      this.positions.mark = null;
+    } else {
+      const selection = editor.getSelection();
+      if (selection) {
+        this.killRing.add(selection);
+        editor.replaceSelection("");
+      }
+    }
+  }
+  copyRegion(editor) {
+    if (this.positions.mark) {
+      const from = this.positions.mark;
+      const to = editor.getCursor();
+      const [start, end] = this.sortPositions(from, to);
+      const text = editor.getRange(start, end);
+      this.killRing.add(text);
+      this.positions.mark = null;
+    } else {
+      const selection = editor.getSelection();
+      if (selection) {
+        this.killRing.add(selection);
+      }
+    }
+  }
+  async yank(editor) {
+    if (this.killRing.getCurrentItem() === null) {
+      const clipboardText = await navigator.clipboard.readText();
+      if (clipboardText) {
+        this.killRing.add(clipboardText);
+      }
+    }
+    const cursorPosition = editor.getCursor();
+    if (!this.positions.yank) {
+      this.positions.yank = cursorPosition;
+    } else {
+      this.killRing.decreaseCurrentIndex();
+    }
+    const currentItem = this.killRing.getCurrentItem();
+    if (currentItem) {
+      editor.setSelection(this.positions.yank, cursorPosition);
+      editor.replaceSelection(currentItem);
+    }
+  }
+  async setMark(editor) {
+    const cursorPosition = editor.getCursor();
+    this.positions.mark = cursorPosition;
+  }
+  resetYankPosition() {
+    this.positions.yank = null;
+  }
+  resetMarkPosition() {
+    this.positions.mark = null;
   }
   reset() {
-    if (this.currentIndex !== 0) {
-      this.currentIndex = 0;
-    }
+    this.resetYankPosition();
+    this.resetMarkPosition();
   }
 };
 
@@ -105,14 +200,12 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     super(app, manifest);
     this.recenterPlugin = new RecenterCursorPlugin();
     this.positions = {
-      yank: null,
-      mark: null,
       main: null
     };
     this.config = {
       killRingMaxSize: DEFAULT_KILL_RING_SIZE
     };
-    this.killRing = new KillRing(DEFAULT_KILL_RING_SIZE);
+    this.killAndYankPlugin = new KillAndYankPlugin(DEFAULT_KILL_RING_SIZE);
     this.keyBindings = [
       {
         key: "g",
@@ -127,7 +220,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: " ",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.positions.mark = editor.getCursor();
+          this.killAndYankPlugin.setMark(editor);
           return true;
         },
         description: "Set mark"
@@ -136,7 +229,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "k",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.killLine(editor);
+          this.killAndYankPlugin.killLine(editor);
           return true;
         },
         description: "Kill line"
@@ -145,7 +238,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "w",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.killRegion(editor);
+          this.killAndYankPlugin.killRegion(editor);
           return true;
         },
         description: "Kill region"
@@ -154,7 +247,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "w",
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.killRegion(editor, true);
+          this.killAndYankPlugin.copyRegion(editor);
           return true;
         },
         description: "Copy region"
@@ -163,8 +256,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "y",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.positions.yank = null;
-          this.yank(editor);
+          this.killAndYankPlugin.resetYankPosition();
+          this.killAndYankPlugin.yank(editor);
           return true;
         },
         description: "Yank"
@@ -173,7 +266,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "y",
         modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.yank(editor);
+          this.killAndYankPlugin.yank(editor);
           return true;
         },
         description: "Yank pop"
@@ -283,65 +376,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       key: keybinding.key
     }];
   }
-  sortPositions(a, b) {
-    return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
-  }
-  killLine(editor) {
-    const cursorPosition = editor.getCursor();
-    const line = editor.getLine(cursorPosition.line);
-    const text = line.slice(cursorPosition.ch);
-    if (text.trim() === "") {
-      const nextLineFirstCharPosition = { line: cursorPosition.line + 1, ch: 0 };
-      editor.replaceRange("", cursorPosition, nextLineFirstCharPosition);
-      return;
-    }
-    this.killRing.add(text);
-    const lastCharPosition = { line: cursorPosition.line, ch: line.length };
-    editor.replaceRange("", cursorPosition, lastCharPosition);
-  }
-  killRegion(editor, copyOnly = false) {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
-      const to = editor.getCursor();
-      const [start, end] = this.sortPositions(from, to);
-      const text = editor.getRange(start, end);
-      this.killRing.add(text);
-      if (!copyOnly) {
-        editor.replaceRange("", start, end);
-      }
-      this.positions.mark = null;
-    } else {
-      const selection = editor.getSelection();
-      if (selection) {
-        this.killRing.add(selection);
-        if (!copyOnly) {
-          editor.replaceSelection("");
-        }
-      }
-    }
-  }
-  async yank(editor) {
-    if (this.killRing.getCurrentItem() === null) {
-      const clipboardText = await navigator.clipboard.readText();
-      if (clipboardText) {
-        this.killRing.add(clipboardText);
-      }
-    }
-    const cursorPostion = editor.getCursor();
-    if (!this.positions.yank) {
-      this.positions.yank = cursorPostion;
-    } else {
-      this.killRing.decreaseCurrentIndex();
-    }
-    const currentItem = this.killRing.getCurrentItem();
-    if (currentItem) {
-      editor.setSelection(this.positions.yank, cursorPostion);
-      editor.replaceSelection(currentItem);
-    }
-  }
   modeQuit(editor) {
-    this.positions.mark = null;
-    this.positions.yank = null;
+    this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
     this.resetMultiCursors(editor);
   }
@@ -358,9 +394,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       }
     }
     if (!["Control", "Alt"].includes(evt.key)) {
-      if (this.positions.yank) {
-        this.positions.yank = null;
-      }
+      this.killAndYankPlugin.resetYankPosition();
       this.recenterPlugin.reset();
     }
     return false;
@@ -378,8 +412,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     return keyMatches && modifiersMatch;
   }
   onunload() {
-    this.positions.mark = null;
-    this.positions.yank = null;
+    this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     if (view) {
@@ -391,14 +424,14 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     if (loadedData) {
       this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
     }
-    this.killRing = new KillRing(this.config.killRingMaxSize);
+    this.killAndYankPlugin = new KillAndYankPlugin(this.config.killRingMaxSize);
   }
   async saveConfig() {
     await this.saveData(this.config);
   }
   async setKillRingMaxSize(size) {
     this.config.killRingMaxSize = size;
-    this.killRing.setMaxSize(size);
+    this.killAndYankPlugin.setKillRingMaxSize(size);
     await this.saveConfig();
   }
   getKillRingMaxSize() {
