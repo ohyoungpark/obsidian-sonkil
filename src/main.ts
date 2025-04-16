@@ -9,12 +9,12 @@ import {
   Setting,
   Modifier,
 } from 'obsidian';
-import { EditorView } from '@codemirror/view';
 
 import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
-import { KillRing } from './KillRing';
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
 import { KillAndYankPlugin } from './KillAndYankPlugin';
+import { MultiCursorPlugin } from './MultiCursorPlugin';
+import { SwapPlugin } from './SwapPlugin';
 
 const DEFAULT_KILL_RING_SIZE = 60;
 const KeyToCodeMap: Record<string, string> = {
@@ -37,6 +37,8 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   private keyBindings: KeyBinding[];
   private recenterPlugin = new RecenterCursorPlugin();
   private killAndYankPlugin: KillAndYankPlugin;
+  private multiCursorPlugin = new MultiCursorPlugin();
+  private swapPlugin = new SwapPlugin();
   config: SonkilConfig;
   protected positions: {
     main: EditorPosition | null;  // main cursor position for multi-cursor
@@ -122,7 +124,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'l',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor: Editor) => {
-          this.recenterEditor(editor);
+          this.recenterPlugin.recenterEditor(editor);
           return true;
         },
         description: 'Recenter editor',
@@ -131,7 +133,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'ArrowUp',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor: Editor) => {
-          this.moveLineUp(editor);
+          this.swapPlugin.moveLineUp(editor);
           return true;
         },
         description: 'Move line up',
@@ -140,7 +142,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'ArrowDown',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor: Editor) => {
-          this.moveLineDown(editor);
+          this.swapPlugin.moveLineDown(editor);
           return true;
         },
         description: 'Move line down',
@@ -149,7 +151,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'ArrowUp',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor: Editor) => {
-          this.addCursorUp(editor);
+          this.multiCursorPlugin.addCursor(editor, 'up');
           return true;
         },
         description: 'Add cursor up',
@@ -158,7 +160,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         key: 'ArrowDown',
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor: Editor) => {
-          this.addCursorDown(editor);
+          this.multiCursorPlugin.addCursor(editor, 'down');
           return true;
         },
         description: 'Add cursor down',
@@ -239,7 +241,7 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   modeQuit(editor: Editor): void {
     this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
-    this.resetMultiCursors(editor);
+    this.multiCursorPlugin.resetMultiCursors(editor);
   }
 
   handleKeyEvent(evt: KeyboardEvent): boolean {
@@ -281,10 +283,11 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   onunload() {
     this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
+    this.multiCursorPlugin.reset();
 
     const view = this.app.workspace.getActiveViewOfType(MarkdownView);
     if (view) {
-      this.resetMultiCursors(view.editor);
+      this.multiCursorPlugin.resetMultiCursors(view.editor);
     }
   }
 
@@ -308,83 +311,6 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
 
   getKillRingMaxSize(): number {
     return this.config.killRingMaxSize;
-  }
-
-  private recenterEditor(editor: Editor): void {
-    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view) return;
-
-    // Obsidian's Editor has an internal cm property that's not exposed in the type definitions
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cmView = (editor as any).cm as EditorView;
-    if (!cmView) return;
-
-    const pos = cmView.state.selection.main.head;
-    const line = cmView.state.doc.lineAt(pos);
-    const mode = this.recenterPlugin.getNextMode();
-
-    cmView.dispatch({
-      effects: EditorView.scrollIntoView(line.from, {
-        y: mode,
-        x: 'nearest'
-      })
-    });
-  }
-
-  private moveLineUp(editor: Editor): void {
-    editor.exec('swapLineUp');
-  }
-
-  private moveLineDown(editor: Editor): void {
-    editor.exec('swapLineDown');
-  }
-
-  private addCursorUp(editor: Editor): void {
-    this.addCursor(editor, 'up');
-  }
-
-  private addCursorDown(editor: Editor): void {
-    this.addCursor(editor, 'down');
-  }
-
-  private addCursor(editor: Editor, direction: 'up' | 'down'): void {
-    const cursors = editor.listSelections();
-
-    let currentLine: number;
-
-    if (direction === 'up') {
-      currentLine = cursors[0].anchor.line - 1;
-    } else {
-      currentLine = cursors[cursors.length - 1].anchor.line + 1;
-    }
-
-    if (currentLine < 0) {
-      return;
-    } else if (currentLine >= editor.lineCount()) {
-      return;
-    }
-
-    if (!this.positions.main) {
-      this.positions.main = editor.getCursor();
-    }
-
-    const newCursor = {
-      line: currentLine,
-      ch: Math.min(
-        this.positions.main.ch,
-        editor.getLine(currentLine).length
-      ),
-    };
-
-    cursors.push({anchor: newCursor, head: newCursor});
-    editor.setSelections(cursors);
-  }
-
-  private resetMultiCursors(editor: Editor): void {
-    if (this.positions.main) {
-      editor.setCursor(this.positions.main);
-      this.positions.main = null;
-    }
   }
 }
 

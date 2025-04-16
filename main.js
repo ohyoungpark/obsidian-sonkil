@@ -29,9 +29,9 @@ __export(main_exports, {
 });
 module.exports = __toCommonJS(main_exports);
 var import_obsidian = require("obsidian");
-var import_view = require("@codemirror/view");
 
 // src/RecenterCursorPlugin.ts
+var import_view = require("@codemirror/view");
 var RecenterCursorPlugin = class {
   constructor() {
     this.modes = ["center", "start", "end"];
@@ -47,9 +47,23 @@ var RecenterCursorPlugin = class {
       this.currentIndex = 0;
     }
   }
+  recenterEditor(editor) {
+    const cmView = editor.cm;
+    if (!cmView)
+      return;
+    const pos = cmView.state.selection.main.head;
+    const line = cmView.state.doc.lineAt(pos);
+    const mode = this.getNextMode();
+    cmView.dispatch({
+      effects: import_view.EditorView.scrollIntoView(line.from, {
+        y: mode,
+        x: "nearest"
+      })
+    });
+  }
 };
 
-// src/killRing.ts
+// src/KillRing.ts
 var KillRing = class {
   constructor(maxSize = 60, clipboard = navigator.clipboard) {
     this.items = [];
@@ -88,7 +102,7 @@ var KillRing = class {
   }
 };
 
-// src/killAndYankPlugin.ts
+// src/KillAndYankPlugin.ts
 var KillAndYankPlugin = class {
   constructor(maxRingSize = 60) {
     this.killRing = new KillRing(maxRingSize);
@@ -183,6 +197,56 @@ var KillAndYankPlugin = class {
   }
 };
 
+// src/MultiCursorPlugin.ts
+var MultiCursorPlugin = class {
+  constructor() {
+    this.mainPosition = null;
+  }
+  addCursor(editor, direction) {
+    const cursors = editor.listSelections();
+    let currentLine;
+    if (direction === "up") {
+      currentLine = cursors[0].anchor.line - 1;
+    } else {
+      currentLine = cursors[cursors.length - 1].anchor.line + 1;
+    }
+    if (currentLine < 0 || currentLine >= editor.lineCount()) {
+      return;
+    }
+    if (!this.mainPosition) {
+      this.mainPosition = editor.getCursor();
+    }
+    const newCursor = {
+      line: currentLine,
+      ch: Math.min(
+        this.mainPosition.ch,
+        editor.getLine(currentLine).length
+      )
+    };
+    cursors.push({ anchor: newCursor, head: newCursor });
+    editor.setSelections(cursors);
+  }
+  resetMultiCursors(editor) {
+    if (this.mainPosition) {
+      editor.setCursor(this.mainPosition);
+      this.mainPosition = null;
+    }
+  }
+  reset() {
+    this.mainPosition = null;
+  }
+};
+
+// src/SwapPlugin.ts
+var SwapPlugin = class {
+  moveLineUp(editor) {
+    editor.exec("swapLineUp");
+  }
+  moveLineDown(editor) {
+    editor.exec("swapLineDown");
+  }
+};
+
 // src/main.ts
 var DEFAULT_KILL_RING_SIZE = 60;
 var KeyToCodeMap = {
@@ -199,6 +263,8 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
     this.recenterPlugin = new RecenterCursorPlugin();
+    this.multiCursorPlugin = new MultiCursorPlugin();
+    this.swapPlugin = new SwapPlugin();
     this.positions = {
       main: null
     };
@@ -275,7 +341,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "l",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
         action: (editor) => {
-          this.recenterEditor(editor);
+          this.recenterPlugin.recenterEditor(editor);
           return true;
         },
         description: "Recenter editor"
@@ -284,7 +350,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "ArrowUp",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor) => {
-          this.moveLineUp(editor);
+          this.swapPlugin.moveLineUp(editor);
           return true;
         },
         description: "Move line up"
@@ -293,7 +359,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "ArrowDown",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
         action: (editor) => {
-          this.moveLineDown(editor);
+          this.swapPlugin.moveLineDown(editor);
           return true;
         },
         description: "Move line down"
@@ -302,7 +368,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "ArrowUp",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor) => {
-          this.addCursorUp(editor);
+          this.multiCursorPlugin.addCursor(editor, "up");
           return true;
         },
         description: "Add cursor up"
@@ -311,7 +377,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         key: "ArrowDown",
         modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
         action: (editor) => {
-          this.addCursorDown(editor);
+          this.multiCursorPlugin.addCursor(editor, "down");
           return true;
         },
         description: "Add cursor down"
@@ -379,7 +445,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   modeQuit(editor) {
     this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
-    this.resetMultiCursors(editor);
+    this.multiCursorPlugin.resetMultiCursors(editor);
   }
   handleKeyEvent(evt) {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
@@ -414,9 +480,10 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   onunload() {
     this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
+    this.multiCursorPlugin.reset();
     const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     if (view) {
-      this.resetMultiCursors(view.editor);
+      this.multiCursorPlugin.resetMultiCursors(view.editor);
     }
   }
   async loadConfig() {
@@ -436,67 +503,6 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   }
   getKillRingMaxSize() {
     return this.config.killRingMaxSize;
-  }
-  recenterEditor(editor) {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-    if (!view)
-      return;
-    const cmView = editor.cm;
-    if (!cmView)
-      return;
-    const pos = cmView.state.selection.main.head;
-    const line = cmView.state.doc.lineAt(pos);
-    const mode = this.recenterPlugin.getNextMode();
-    cmView.dispatch({
-      effects: import_view.EditorView.scrollIntoView(line.from, {
-        y: mode,
-        x: "nearest"
-      })
-    });
-  }
-  moveLineUp(editor) {
-    editor.exec("swapLineUp");
-  }
-  moveLineDown(editor) {
-    editor.exec("swapLineDown");
-  }
-  addCursorUp(editor) {
-    this.addCursor(editor, "up");
-  }
-  addCursorDown(editor) {
-    this.addCursor(editor, "down");
-  }
-  addCursor(editor, direction) {
-    const cursors = editor.listSelections();
-    let currentLine;
-    if (direction === "up") {
-      currentLine = cursors[0].anchor.line - 1;
-    } else {
-      currentLine = cursors[cursors.length - 1].anchor.line + 1;
-    }
-    if (currentLine < 0) {
-      return;
-    } else if (currentLine >= editor.lineCount()) {
-      return;
-    }
-    if (!this.positions.main) {
-      this.positions.main = editor.getCursor();
-    }
-    const newCursor = {
-      line: currentLine,
-      ch: Math.min(
-        this.positions.main.ch,
-        editor.getLine(currentLine).length
-      )
-    };
-    cursors.push({ anchor: newCursor, head: newCursor });
-    editor.setSelections(cursors);
-  }
-  resetMultiCursors(editor) {
-    if (this.positions.main) {
-      editor.setCursor(this.positions.main);
-      this.positions.main = null;
-    }
   }
 };
 var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {
