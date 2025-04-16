@@ -103,13 +103,14 @@ var KillRing = class {
 };
 
 // src/KillAndYankPlugin.ts
+var KILL_RING_MAX_SIZE = 120;
 var KillAndYankPlugin = class {
-  constructor(maxRingSize = 60) {
-    this.killRing = new KillRing(maxRingSize);
+  constructor() {
     this.positions = {
       mark: null,
       yank: null
     };
+    this.killRing = new KillRing(KILL_RING_MAX_SIZE);
   }
   setKillRingMaxSize(size) {
     this.killRing.setMaxSize(size);
@@ -248,7 +249,6 @@ var SwapPlugin = class {
 };
 
 // src/main.ts
-var DEFAULT_KILL_RING_SIZE = 60;
 var KeyToCodeMap = {
   " ": "Space",
   "g": "KeyG",
@@ -263,15 +263,9 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
   constructor(app, manifest) {
     super(app, manifest);
     this.recenterPlugin = new RecenterCursorPlugin();
+    this.killAndYankPlugin = new KillAndYankPlugin();
     this.multiCursorPlugin = new MultiCursorPlugin();
     this.swapPlugin = new SwapPlugin();
-    this.positions = {
-      main: null
-    };
-    this.config = {
-      killRingMaxSize: DEFAULT_KILL_RING_SIZE
-    };
-    this.killAndYankPlugin = new KillAndYankPlugin(DEFAULT_KILL_RING_SIZE);
     this.keyBindings = [
       {
         key: "g",
@@ -385,7 +379,6 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     ];
   }
   async onload() {
-    await this.loadConfig();
     console.log("Sonkil plugin loaded, kill ring initialized");
     this.registerDomEvent(
       document,
@@ -425,7 +418,6 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         }
       });
     });
-    this.addSettingTab(new SonkilSettingTab(this.app, this));
   }
   keybindingToHotkeys(keybinding) {
     const modifiers = [];
@@ -485,42 +477,5 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
     if (view) {
       this.multiCursorPlugin.resetMultiCursors(view.editor);
     }
-  }
-  async loadConfig() {
-    const loadedData = await this.loadData();
-    if (loadedData) {
-      this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
-    }
-    this.killAndYankPlugin = new KillAndYankPlugin(this.config.killRingMaxSize);
-  }
-  async saveConfig() {
-    await this.saveData(this.config);
-  }
-  async setKillRingMaxSize(size) {
-    this.config.killRingMaxSize = size;
-    this.killAndYankPlugin.setKillRingMaxSize(size);
-    await this.saveConfig();
-  }
-  getKillRingMaxSize() {
-    return this.config.killRingMaxSize;
-  }
-};
-var SonkilSettingTab = class extends import_obsidian.PluginSettingTab {
-  constructor(app, plugin) {
-    super(app, plugin);
-    this.configHandler = plugin;
-  }
-  display() {
-    const { containerEl } = this;
-    containerEl.empty();
-    containerEl.createEl("h2", { text: "Sonkil Settings" });
-    new import_obsidian.Setting(containerEl).setName("Kill Ring Max Size").setDesc("Maximum number of items to keep in the kill ring").addText(
-      (text) => text.setPlaceholder("Enter max size").setValue(this.configHandler.getKillRingMaxSize().toString()).onChange(async (value) => {
-        const newSize = parseInt(value);
-        if (!isNaN(newSize) && newSize > 0) {
-          await this.configHandler.setKillRingMaxSize(newSize);
-        }
-      })
-    );
   }
 };

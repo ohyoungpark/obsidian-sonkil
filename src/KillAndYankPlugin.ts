@@ -1,21 +1,19 @@
 import { Editor, EditorPosition } from 'obsidian';
 import { KillRing } from './KillRing';
+import { PositionsInterface } from './types';
 
-export interface PositionsInterface {
-  mark: EditorPosition | null;
-  yank: EditorPosition | null;
-}
+const KILL_RING_MAX_SIZE = 120;
 
 export class KillAndYankPlugin {
   protected positions: PositionsInterface;
-  protected killRing: KillRing;
+  private killRing: KillRing;
 
-  constructor(maxRingSize: number = 60) {
-    this.killRing = new KillRing(maxRingSize);
+  constructor() {
     this.positions = {
       mark: null,
       yank: null
     };
+    this.killRing = new KillRing(KILL_RING_MAX_SIZE);
   }
 
   setKillRingMaxSize(size: number): void {

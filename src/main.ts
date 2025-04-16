@@ -1,22 +1,18 @@
 import {
   App,
   Editor,
-  EditorPosition,
   Hotkey,
   MarkdownView,
   Plugin,
-  PluginSettingTab,
-  Setting,
   Modifier,
 } from 'obsidian';
 
-import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
+import { KeyBinding, PluginManifest, ModifierKey } from './types';
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
 import { KillAndYankPlugin } from './KillAndYankPlugin';
 import { MultiCursorPlugin } from './MultiCursorPlugin';
 import { SwapPlugin } from './SwapPlugin';
 
-const DEFAULT_KILL_RING_SIZE = 60;
 const KeyToCodeMap: Record<string, string> = {
   ' ': 'Space',
   'g': 'KeyG',
@@ -28,31 +24,15 @@ const KeyToCodeMap: Record<string, string> = {
   'ArrowDown': 'ArrowDown',
 };
 
-export interface ConfigChangeHandler {
-  setKillRingMaxSize(size: number): Promise<void>;
-  getKillRingMaxSize(): number;
-}
-
-export default class SonkilPlugin extends Plugin implements ConfigChangeHandler {
+export default class SonkilPlugin extends Plugin {
   private keyBindings: KeyBinding[];
   private recenterPlugin = new RecenterCursorPlugin();
-  private killAndYankPlugin: KillAndYankPlugin;
+  private killAndYankPlugin = new KillAndYankPlugin();
   private multiCursorPlugin = new MultiCursorPlugin();
   private swapPlugin = new SwapPlugin();
-  config: SonkilConfig;
-  protected positions: {
-    main: EditorPosition | null;  // main cursor position for multi-cursor
-  };
 
   constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.positions = {
-      main: null,
-    };
-    this.config = {
-      killRingMaxSize: DEFAULT_KILL_RING_SIZE,
-    };
-    this.killAndYankPlugin = new KillAndYankPlugin(DEFAULT_KILL_RING_SIZE);
 
     // Key binding definitions
     this.keyBindings = [
@@ -169,7 +149,6 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
   }
 
   async onload() {
-    await this.loadConfig();
     console.log('Sonkil plugin loaded, kill ring initialized');
 
     // Register key event listener (capture phase)
@@ -220,9 +199,6 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
         },
       });
     });
-
-    // Add settings tab
-    this.addSettingTab(new SonkilSettingTab(this.app, this));
   }
 
   private keybindingToHotkeys(keybinding: KeyBinding): Hotkey[] {
@@ -289,58 +265,5 @@ export default class SonkilPlugin extends Plugin implements ConfigChangeHandler 
     if (view) {
       this.multiCursorPlugin.resetMultiCursors(view.editor);
     }
-  }
-
-  async loadConfig() {
-    const loadedData = await this.loadData();
-    if (loadedData) {
-      this.config.killRingMaxSize = loadedData.killRingMaxSize || DEFAULT_KILL_RING_SIZE;
-    }
-    this.killAndYankPlugin = new KillAndYankPlugin(this.config.killRingMaxSize);
-  }
-
-  async saveConfig() {
-    await this.saveData(this.config);
-  }
-
-  async setKillRingMaxSize(size: number): Promise<void> {
-    this.config.killRingMaxSize = size;
-    this.killAndYankPlugin.setKillRingMaxSize(size);
-    await this.saveConfig();
-  }
-
-  getKillRingMaxSize(): number {
-    return this.config.killRingMaxSize;
-  }
-}
-
-class SonkilSettingTab extends PluginSettingTab {
-  private configHandler: ConfigChangeHandler;
-
-  constructor(app: App, plugin: Plugin & ConfigChangeHandler) {
-    super(app, plugin);
-    this.configHandler = plugin;
-  }
-
-  display(): void {
-    const { containerEl } = this;
-    containerEl.empty();
-
-    containerEl.createEl('h2', { text: 'Sonkil Settings' });
-
-    new Setting(containerEl)
-      .setName('Kill Ring Max Size')
-      .setDesc('Maximum number of items to keep in the kill ring')
-      .addText((text) =>
-        text
-          .setPlaceholder('Enter max size')
-          .setValue(this.configHandler.getKillRingMaxSize().toString())
-          .onChange(async (value) => {
-            const newSize = parseInt(value);
-            if (!isNaN(newSize) && newSize > 0) {
-              await this.configHandler.setKillRingMaxSize(newSize);
-            }
-          })
-      );
   }
 }

@@ -1,4 +1,4 @@
-import { Editor as ObsidianEditor } from 'obsidian';
+import { Editor, EditorPosition } from 'obsidian';
 
 export interface ModifierKey {
   ctrlKey: boolean;
@@ -12,8 +12,10 @@ export interface KeyEvent {
   modifiers: ModifierKey;
 }
 
-export interface KeyBinding extends KeyEvent {
-  action: (editor: ObsidianEditor) => boolean;
+export interface KeyBinding {
+  key: string;
+  modifiers: ModifierKey;
+  action: (editor: Editor) => boolean;
   description: string;
 }
 
@@ -28,4 +30,11 @@ export interface PluginManifest {
   minAppVersion: string;
   description: string;
   author: string;
+  authorUrl?: string;
+  isDesktopOnly?: boolean;
+}
+
+export interface PositionsInterface {
+  mark: EditorPosition | null;
+  yank: EditorPosition | null;
 }
