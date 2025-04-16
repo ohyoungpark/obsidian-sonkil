@@ -28,14 +28,26 @@ __export(main_exports, {
   default: () => SonkilPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian = require("obsidian");
+var import_obsidian2 = require("obsidian");
 
 // src/RecenterCursorPlugin.ts
 var import_view = require("@codemirror/view");
 var RecenterCursorPlugin = class {
-  constructor() {
+  constructor(plugin) {
+    this.plugin = plugin;
     this.modes = ["center", "start", "end"];
     this.currentIndex = 0;
+    this.registerCommands();
+  }
+  registerCommands() {
+    this.plugin.addCommand({
+      id: "sonkil-recenter-editor",
+      name: "Recenter editor",
+      hotkeys: [{ modifiers: ["Ctrl"], key: "l" }],
+      editorCallback: (editor) => {
+        this.recenterEditor(editor);
+      }
+    });
   }
   getNextMode() {
     const mode = this.modes[this.currentIndex];
@@ -64,17 +76,17 @@ var RecenterCursorPlugin = class {
 };
 
 // src/KillRing.ts
+var KILL_RING_MAX_SIZE = 120;
 var KillRing = class {
-  constructor(maxSize = 60, clipboard = navigator.clipboard) {
+  constructor(clipboard = navigator.clipboard) {
     this.items = [];
     this.currentIndex = -1;
-    this.maxSize = maxSize;
     this.clipboard = clipboard;
   }
   add(text) {
     this.items.push(text);
-    if (this.items.length > this.maxSize) {
-      this.items = this.items.slice(-this.maxSize);
+    if (this.items.length > KILL_RING_MAX_SIZE) {
+      this.items = this.items.slice(-KILL_RING_MAX_SIZE);
     }
     this.currentIndex = this.items.length - 1;
     this.clipboard.writeText(text).catch((err) => {
@@ -91,29 +103,69 @@ var KillRing = class {
       return null;
     return this.items[this.currentIndex];
   }
-  setMaxSize(newSize) {
-    if (newSize < 1)
-      throw new Error("Kill Ring size must be at least 1");
-    this.maxSize = newSize;
-    if (this.items.length > newSize) {
-      this.items = this.items.slice(-newSize);
-      this.currentIndex = Math.min(this.currentIndex, this.items.length - 1);
-    }
-  }
 };
 
 // src/KillAndYankPlugin.ts
-var KILL_RING_MAX_SIZE = 120;
 var KillAndYankPlugin = class {
-  constructor() {
+  constructor(plugin) {
+    this.plugin = plugin;
     this.positions = {
       mark: null,
       yank: null
     };
-    this.killRing = new KillRing(KILL_RING_MAX_SIZE);
+    this.killRing = new KillRing();
+    this.registerCommands();
   }
-  setKillRingMaxSize(size) {
-    this.killRing.setMaxSize(size);
+  registerCommands() {
+    this.plugin.addCommand({
+      id: "sonkil-set-mark",
+      name: "Set mark",
+      hotkeys: [{ modifiers: ["Ctrl"], key: " " }],
+      editorCallback: (editor) => {
+        this.setMark(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-kill-line",
+      name: "Kill line",
+      hotkeys: [{ modifiers: ["Ctrl"], key: "k" }],
+      editorCallback: (editor) => {
+        this.killLine(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-kill-region",
+      name: "Kill region",
+      hotkeys: [{ modifiers: ["Ctrl"], key: "w" }],
+      editorCallback: (editor) => {
+        this.killRegion(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-copy-region",
+      name: "Copy region",
+      hotkeys: [{ modifiers: ["Alt"], key: "w" }],
+      editorCallback: (editor) => {
+        this.copyRegion(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-yank",
+      name: "Yank",
+      hotkeys: [{ modifiers: ["Ctrl"], key: "y" }],
+      editorCallback: (editor) => {
+        this.reset();
+        this.yank(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-yank-pop",
+      name: "Yank pop",
+      hotkeys: [{ modifiers: ["Alt"], key: "y" }],
+      editorCallback: (editor) => {
+        this.yank(editor);
+      }
+    });
   }
   sortPositions(a, b) {
     return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
@@ -182,26 +234,40 @@ var KillAndYankPlugin = class {
       editor.replaceSelection(currentItem);
     }
   }
-  async setMark(editor) {
+  setMark(editor) {
     const cursorPosition = editor.getCursor();
     this.positions.mark = cursorPosition;
   }
-  resetYankPosition() {
-    this.positions.yank = null;
-  }
-  resetMarkPosition() {
-    this.positions.mark = null;
-  }
   reset() {
-    this.resetYankPosition();
-    this.resetMarkPosition();
+    this.positions.yank = null;
+    this.positions.mark = null;
   }
 };
 
 // src/MultiCursorPlugin.ts
 var MultiCursorPlugin = class {
-  constructor() {
+  constructor(plugin) {
+    this.plugin = plugin;
     this.mainPosition = null;
+    this.registerCommands();
+  }
+  registerCommands() {
+    this.plugin.addCommand({
+      id: "sonkil-add-cursor-up",
+      name: "Add cursor up",
+      hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "ArrowUp" }],
+      editorCallback: (editor) => {
+        this.addCursor(editor, "up");
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-add-cursor-down",
+      name: "Add cursor down",
+      hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "ArrowDown" }],
+      editorCallback: (editor) => {
+        this.addCursor(editor, "down");
+      }
+    });
   }
   addCursor(editor, direction) {
     const cursors = editor.listSelections();
@@ -227,19 +293,38 @@ var MultiCursorPlugin = class {
     cursors.push({ anchor: newCursor, head: newCursor });
     editor.setSelections(cursors);
   }
-  resetMultiCursors(editor) {
+  reset(editor) {
     if (this.mainPosition) {
       editor.setCursor(this.mainPosition);
       this.mainPosition = null;
     }
   }
-  reset() {
-    this.mainPosition = null;
-  }
 };
 
 // src/SwapPlugin.ts
 var SwapPlugin = class {
+  constructor(plugin) {
+    this.plugin = plugin;
+    this.registerCommands();
+  }
+  registerCommands() {
+    this.plugin.addCommand({
+      id: "sonkil-move-line-up",
+      name: "Move line up",
+      hotkeys: [{ modifiers: ["Ctrl", "Meta"], key: "ArrowUp" }],
+      editorCallback: (editor) => {
+        this.moveLineUp(editor);
+      }
+    });
+    this.plugin.addCommand({
+      id: "sonkil-move-line-down",
+      name: "Move line down",
+      hotkeys: [{ modifiers: ["Ctrl", "Meta"], key: "ArrowDown" }],
+      editorCallback: (editor) => {
+        this.moveLineDown(editor);
+      }
+    });
+  }
   moveLineUp(editor) {
     editor.exec("swapLineUp");
   }
@@ -248,148 +333,97 @@ var SwapPlugin = class {
   }
 };
 
-// src/main.ts
-var KeyToCodeMap = {
-  " ": "Space",
-  "g": "KeyG",
-  "k": "KeyK",
-  "w": "KeyW",
-  "y": "KeyY",
-  "l": "KeyL",
-  "ArrowUp": "ArrowUp",
-  "ArrowDown": "ArrowDown"
-};
-var SonkilPlugin = class extends import_obsidian.Plugin {
-  constructor(app, manifest) {
-    super(app, manifest);
-    this.recenterPlugin = new RecenterCursorPlugin();
-    this.killAndYankPlugin = new KillAndYankPlugin();
-    this.multiCursorPlugin = new MultiCursorPlugin();
-    this.swapPlugin = new SwapPlugin();
-    this.keyBindings = [
-      {
-        key: "g",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.modeQuit(editor);
-          return true;
-        },
-        description: "Cancel mark and exit yank mode"
-      },
-      {
-        key: " ",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.setMark(editor);
-          return true;
-        },
-        description: "Set mark"
-      },
-      {
-        key: "k",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.killLine(editor);
-          return true;
-        },
-        description: "Kill line"
-      },
-      {
-        key: "w",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.killRegion(editor);
-          return true;
-        },
-        description: "Kill region"
-      },
-      {
-        key: "w",
-        modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.copyRegion(editor);
-          return true;
-        },
-        description: "Copy region"
-      },
-      {
-        key: "y",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.resetYankPosition();
-          this.killAndYankPlugin.yank(editor);
-          return true;
-        },
-        description: "Yank"
-      },
-      {
-        key: "y",
-        modifiers: { ctrlKey: false, altKey: true, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.killAndYankPlugin.yank(editor);
-          return true;
-        },
-        description: "Yank pop"
-      },
-      {
-        key: "l",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: false },
-        action: (editor) => {
-          this.recenterPlugin.recenterEditor(editor);
-          return true;
-        },
-        description: "Recenter editor"
-      },
-      {
-        key: "ArrowUp",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
-        action: (editor) => {
-          this.swapPlugin.moveLineUp(editor);
-          return true;
-        },
-        description: "Move line up"
-      },
-      {
-        key: "ArrowDown",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: false, metaKey: true },
-        action: (editor) => {
-          this.swapPlugin.moveLineDown(editor);
-          return true;
-        },
-        description: "Move line down"
-      },
-      {
-        key: "ArrowUp",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
-        action: (editor) => {
-          this.multiCursorPlugin.addCursor(editor, "up");
-          return true;
-        },
-        description: "Add cursor up"
-      },
-      {
-        key: "ArrowDown",
-        modifiers: { ctrlKey: true, altKey: false, shiftKey: true, metaKey: false },
-        action: (editor) => {
-          this.multiCursorPlugin.addCursor(editor, "down");
-          return true;
-        },
-        description: "Add cursor down"
-      }
-    ];
+// src/KeyController.ts
+var import_obsidian = require("obsidian");
+var KeyController = class {
+  constructor(plugin) {
+    this.plugin = plugin;
+    this.keyBindings = [];
+    this.KeyToCodeMap = {
+      " ": "Space",
+      "g": "KeyG",
+      "k": "KeyK",
+      "w": "KeyW",
+      "y": "KeyY",
+      "l": "KeyL",
+      "ArrowUp": "ArrowUp",
+      "ArrowDown": "ArrowDown"
+    };
+    this.initializeKeyBindings();
   }
+  initializeKeyBindings() {
+    const commands = this.plugin.app.commands.commands;
+    const pluginId = this.plugin.manifest.id;
+    Object.entries(commands).filter(([id]) => id.startsWith(`${pluginId}:sonkil-`)).forEach(([id, command]) => {
+      if (command.hotkeys && command.hotkeys.length > 0) {
+        command.hotkeys.forEach((hotkey) => {
+          this.keyBindings.push({
+            key: hotkey.key,
+            modifiers: {
+              ctrlKey: hotkey.modifiers.includes("Ctrl"),
+              altKey: hotkey.modifiers.includes("Alt"),
+              shiftKey: hotkey.modifiers.includes("Shift"),
+              metaKey: hotkey.modifiers.includes("Meta")
+            },
+            commandId: id,
+            description: command.name
+          });
+        });
+      }
+    });
+  }
+  handleKeyEvent(evt) {
+    const view = this.plugin.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+    if (!view)
+      return false;
+    const target = evt.target;
+    if (target.classList.contains("inline-title") || target.closest(".inline-title") !== null) {
+      return false;
+    }
+    if (evt.ctrlKey || evt.altKey || evt.key === "Escape") {
+      for (const binding of this.keyBindings) {
+        if (this.isKeyBindingMatch(evt, binding)) {
+          this.plugin.app.commands.executeCommandById(binding.commandId);
+          return true;
+        }
+      }
+    }
+    if (!["Control", "Alt"].includes(evt.key)) {
+      this.plugin.app.commands.executeCommandById("sonkil-mode-quit");
+    }
+    return false;
+  }
+  isKeyBindingMatch(evt, binding) {
+    const keyPressed = evt.key.toLowerCase();
+    const codePressed = evt.code;
+    const bindingKey = binding.key.toLowerCase();
+    const keyMatches = codePressed === this.KeyToCodeMap[bindingKey] || keyPressed === bindingKey;
+    return keyMatches && evt.ctrlKey === binding.modifiers.ctrlKey && evt.altKey === binding.modifiers.altKey && evt.shiftKey === binding.modifiers.shiftKey && evt.metaKey === binding.modifiers.metaKey;
+  }
+};
+
+// src/main.ts
+var SonkilPlugin = class extends import_obsidian2.Plugin {
   async onload() {
     console.log("Sonkil plugin loaded, kill ring initialized");
+    this.recenterPlugin = new RecenterCursorPlugin(this);
+    this.killAndYankPlugin = new KillAndYankPlugin(this);
+    this.multiCursorPlugin = new MultiCursorPlugin(this);
+    this.swapPlugin = new SwapPlugin(this);
+    this.addCommand({
+      id: "sonkil-mode-quit",
+      name: "Cancel mark and exit yank mode",
+      hotkeys: [{ modifiers: ["Ctrl"], key: "g" }],
+      editorCallback: (editor) => {
+        this.modeQuit(editor);
+      }
+    });
+    this.keyController = new KeyController(this);
     this.registerDomEvent(
       document,
       "keydown",
       (evt) => {
-        const target = evt.target;
-        if (target.classList.contains("inline-title") || target.closest(".inline-title") !== null) {
-          console.log("Inline title detected, skipping");
-          return;
-        }
-        const shouldBlockEvent = this.handleKeyEvent(evt);
+        const shouldBlockEvent = this.keyController.handleKeyEvent(evt);
         if (shouldBlockEvent) {
           evt.preventDefault();
           evt.stopPropagation();
@@ -398,7 +432,7 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
       true
     );
     this.registerDomEvent(document, "mousedown", () => {
-      const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
+      const view = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
       if (view) {
         const editor = view.editor;
         setTimeout(() => {
@@ -406,76 +440,10 @@ var SonkilPlugin = class extends import_obsidian.Plugin {
         }, 10);
       }
     });
-    this.keyBindings.forEach((binding) => {
-      const commandId = `sonkil-${binding.description.toLowerCase().replace(/\s+/g, "-")}`;
-      const commandName = binding.description;
-      this.addCommand({
-        id: commandId,
-        name: commandName,
-        hotkeys: this.keybindingToHotkeys(binding),
-        editorCallback: (editor) => {
-          binding.action(editor);
-        }
-      });
-    });
-  }
-  keybindingToHotkeys(keybinding) {
-    const modifiers = [];
-    if (keybinding.modifiers.ctrlKey)
-      modifiers.push("Mod");
-    if (keybinding.modifiers.altKey)
-      modifiers.push("Alt");
-    if (keybinding.modifiers.shiftKey)
-      modifiers.push("Shift");
-    if (keybinding.modifiers.metaKey)
-      modifiers.push("Meta");
-    return [{
-      modifiers,
-      key: keybinding.key
-    }];
   }
   modeQuit(editor) {
     this.killAndYankPlugin.reset();
     this.recenterPlugin.reset();
-    this.multiCursorPlugin.resetMultiCursors(editor);
-  }
-  handleKeyEvent(evt) {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-    if (!view)
-      return false;
-    const editor = view.editor;
-    if (evt.ctrlKey || evt.altKey || evt.key === "Escape") {
-      for (const binding of this.keyBindings) {
-        if (this.isKeyBindingMatch(evt, binding)) {
-          return binding.action(editor);
-        }
-      }
-    }
-    if (!["Control", "Alt"].includes(evt.key)) {
-      this.killAndYankPlugin.resetYankPosition();
-      this.recenterPlugin.reset();
-    }
-    return false;
-  }
-  isKeyBindingMatch(evt, binding) {
-    const keyPressed = evt.key.toLowerCase();
-    const codePressed = evt.code;
-    const bindingKey = binding.key.toLowerCase();
-    const keyMatches = codePressed === KeyToCodeMap[bindingKey] || keyPressed === bindingKey;
-    const modifiersMatch = Object.entries(binding.modifiers).every(([key, value]) => {
-      if (value === void 0)
-        return true;
-      return value === evt[key];
-    });
-    return keyMatches && modifiersMatch;
-  }
-  onunload() {
-    this.killAndYankPlugin.reset();
-    this.recenterPlugin.reset();
-    this.multiCursorPlugin.reset();
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
-    if (view) {
-      this.multiCursorPlugin.resetMultiCursors(view.editor);
-    }
+    this.multiCursorPlugin.reset(editor);
   }
 };

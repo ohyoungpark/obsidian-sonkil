@@ -30,17 +30,25 @@ function checkFile(filePath) {
     return false;
   }
 
-  const content = fs.readFileSync(filePath, 'utf8');
-  let hasSecrets = false;
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    let hasSecrets = false;
 
-  SECRET_PATTERNS.forEach(pattern => {
-    if (pattern.test(content)) {
-      console.error(`\x1b[31mPotential secret found in ${filePath}\x1b[0m`);
-      hasSecrets = true;
+    SECRET_PATTERNS.forEach(pattern => {
+      if (pattern.test(content)) {
+        console.error(`\x1b[31mPotential secret found in ${filePath}\x1b[0m`);
+        hasSecrets = true;
+      }
+    });
+
+    return hasSecrets;
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      console.warn(`\x1b[33mFile not found: ${filePath}\x1b[0m`);
+      return false;
     }
-  });
-
-  return hasSecrets;
+    throw error;
+  }
 }
 
 function main() {

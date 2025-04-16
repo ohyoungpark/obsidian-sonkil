@@ -3,24 +3,24 @@ export interface ClipboardInterface {
   readText(): Promise<string>;
 }
 
+const KILL_RING_MAX_SIZE = 120;
+
 export class KillRing {
   protected items: string[];
   protected currentIndex: number;
   protected clipboard: ClipboardInterface;
-  private maxSize: number;
 
-  constructor(maxSize: number = 60, clipboard: ClipboardInterface = navigator.clipboard) {
+  constructor(clipboard: ClipboardInterface = navigator.clipboard) {
     this.items = [];
     this.currentIndex = -1;
-    this.maxSize = maxSize;
     this.clipboard = clipboard;
   }
 
   add(text: string): void {
     this.items.push(text);
 
-    if (this.items.length > this.maxSize) {
-      this.items = this.items.slice(-this.maxSize);
+    if (this.items.length > KILL_RING_MAX_SIZE) {
+      this.items = this.items.slice(-KILL_RING_MAX_SIZE);
     }
     this.currentIndex = this.items.length - 1;
 
@@ -37,14 +37,5 @@ export class KillRing {
   getCurrentItem(): string | null {
     if (this.currentIndex === -1 || this.items.length === 0) return null;
     return this.items[this.currentIndex];
-  }
-
-  setMaxSize(newSize: number): void {
-    if (newSize < 1) throw new Error('Kill Ring size must be at least 1');
-    this.maxSize = newSize;
-    if (this.items.length > newSize) {
-      this.items = this.items.slice(-newSize);
-      this.currentIndex = Math.min(this.currentIndex, this.items.length - 1);
-    }
   }
 }
