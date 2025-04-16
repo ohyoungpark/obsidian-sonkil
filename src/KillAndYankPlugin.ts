@@ -1,5 +1,5 @@
 import { Editor, EditorPosition } from 'obsidian';
-import { KillRing } from './killRing';
+import { KillRing } from './KillRing';
 
 export interface PositionsInterface {
   mark: EditorPosition | null;

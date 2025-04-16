@@ -12,8 +12,9 @@ import {
 import { EditorView } from '@codemirror/view';
 
 import { KeyBinding, PluginManifest, ModifierKey, SonkilConfig } from './types';
+import { KillRing } from './KillRing';
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
-import { KillAndYankPlugin } from './killAndYankPlugin';
+import { KillAndYankPlugin } from './KillAndYankPlugin';
 
 const DEFAULT_KILL_RING_SIZE = 60;
 const KeyToCodeMap: Record<string, string> = {
