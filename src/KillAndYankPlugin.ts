@@ -34,7 +34,7 @@ export class KillAndYankPlugin {
             name: 'Kill line',
             hotkeys: [{ modifiers: ['Ctrl'], key: 'k' }],
             editorCallback: (editor: Editor) => {
-                this.killLine(editor);
+                this.killLines(editor);
             }
         });
 
@@ -80,21 +80,30 @@ export class KillAndYankPlugin {
         return a.line < b.line || (a.line === b.line && a.ch <= b.ch) ? [a, b] : [b, a];
     }
 
-    protected killLine(editor: Editor): void {
-        const cursorPosition: EditorPosition = editor.getCursor();
-        const line = editor.getLine(cursorPosition.line);
+    protected killLines(editor: Editor): void {
+        const selections = editor.listSelections();
+        const killedTexts: string[] = [];
 
-        const text = line.slice(cursorPosition.ch);
+        selections.forEach(selection => {
+            const line = editor.getLine(selection.head.line);
+            const text = line.slice(selection.head.ch);
+            killedTexts.push(text);
 
-        if (text.trim() === '') {
-            const nextLineFirstCharPosition: EditorPosition = { line: cursorPosition.line + 1, ch: 0 };
-            editor.replaceRange('', cursorPosition, nextLineFirstCharPosition);
+            const lastCharPosition: EditorPosition = { line: selection.head.line, ch: line.length };
+            editor.replaceRange('', selection.head, lastCharPosition);
+        });
+
+        const combinedText = killedTexts.join('\n');
+        if (combinedText.trim() === '') {
+            const firstLine = selections[0].head.line;
+            const lastLine = selections[selections.length - 1].head.line;
+            const firstCharPosition: EditorPosition = { line: firstLine, ch: selections[0].head.ch };
+            const lastCharPosition: EditorPosition = { line: lastLine + 1, ch: 0 };
+            editor.replaceRange('', firstCharPosition, lastCharPosition);
             return;
         }
 
-        this.killRing.add(text);
-        const lastCharPosition: EditorPosition = { line: cursorPosition.line, ch: line.length };
-        editor.replaceRange('', cursorPosition, lastCharPosition);
+        this.killRing.add(combinedText);
     }
 
     protected killRegion(editor: Editor): void {

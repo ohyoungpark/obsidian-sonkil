@@ -130,7 +130,7 @@ var KillAndYankPlugin = class {
       name: "Kill line",
       hotkeys: [{ modifiers: ["Ctrl"], key: "k" }],
       editorCallback: (editor) => {
-        this.killLine(editor);
+        this.killLines(editor);
       }
     });
     this.plugin.addCommand({
@@ -170,18 +170,26 @@ var KillAndYankPlugin = class {
   sortPositions(a, b) {
     return a.line < b.line || a.line === b.line && a.ch <= b.ch ? [a, b] : [b, a];
   }
-  killLine(editor) {
-    const cursorPosition = editor.getCursor();
-    const line = editor.getLine(cursorPosition.line);
-    const text = line.slice(cursorPosition.ch);
-    if (text.trim() === "") {
-      const nextLineFirstCharPosition = { line: cursorPosition.line + 1, ch: 0 };
-      editor.replaceRange("", cursorPosition, nextLineFirstCharPosition);
+  killLines(editor) {
+    const selections = editor.listSelections();
+    const killedTexts = [];
+    selections.forEach((selection) => {
+      const line = editor.getLine(selection.head.line);
+      const text = line.slice(selection.head.ch);
+      killedTexts.push(text);
+      const lastCharPosition = { line: selection.head.line, ch: line.length };
+      editor.replaceRange("", selection.head, lastCharPosition);
+    });
+    const combinedText = killedTexts.join("\n");
+    if (combinedText.trim() === "") {
+      const firstLine = selections[0].head.line;
+      const lastLine = selections[selections.length - 1].head.line;
+      const firstCharPosition = { line: firstLine, ch: selections[0].head.ch };
+      const lastCharPosition = { line: lastLine + 1, ch: 0 };
+      editor.replaceRange("", firstCharPosition, lastCharPosition);
       return;
     }
-    this.killRing.add(text);
-    const lastCharPosition = { line: cursorPosition.line, ch: line.length };
-    editor.replaceRange("", cursorPosition, lastCharPosition);
+    this.killRing.add(combinedText);
   }
   killRegion(editor) {
     if (this.positions.mark) {
@@ -294,10 +302,15 @@ var MultiCursorPlugin = class {
     editor.setSelections(cursors);
   }
   reset(editor) {
-    if (this.mainPosition) {
-      editor.setCursor(this.mainPosition);
-      this.mainPosition = null;
+    const selections = editor.listSelections();
+    if (selections.length > 1) {
+      if (this.mainPosition) {
+        editor.setCursor(this.mainPosition);
+      } else {
+        editor.setCursor(selections[0].anchor);
+      }
     }
+    this.mainPosition = null;
   }
 };
 
@@ -311,7 +324,7 @@ var SwapPlugin = class {
     this.plugin.addCommand({
       id: "sonkil-move-line-up",
       name: "Move line up",
-      hotkeys: [{ modifiers: ["Ctrl", "Meta"], key: "ArrowUp" }],
+      hotkeys: [{ modifiers: ["Ctrl", "Alt"], key: "ArrowUp" }],
       editorCallback: (editor) => {
         this.moveLineUp(editor);
       }
@@ -319,7 +332,7 @@ var SwapPlugin = class {
     this.plugin.addCommand({
       id: "sonkil-move-line-down",
       name: "Move line down",
-      hotkeys: [{ modifiers: ["Ctrl", "Meta"], key: "ArrowDown" }],
+      hotkeys: [{ modifiers: ["Ctrl", "Alt"], key: "ArrowDown" }],
       editorCallback: (editor) => {
         this.moveLineDown(editor);
       }
