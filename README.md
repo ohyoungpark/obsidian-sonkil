@@ -5,7 +5,13 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 
 ## Features
 
-### Core Emacs-Style Features
+### Features
+- __Non-English Input Support__: Hotkeys work properly even when using non-English input methods
+- __Kill Ring__: Storage system with 120 entry capacity
+- __Clipboard Sync__: Cut/copied text automatically syncs with system clipboard
+- __Multi-cursor Kill Line__: Cut text from multiple cursor positions and store as a single paragraph
+
+### Emacs-style Keystrokes
 
 | Keystrokes | Description |
 |------------|-------------|
@@ -18,7 +24,7 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 | `C-l` | Recenter editor view (cycles through Center/Top/Bottom) |
 | `C-g` | Cancel current operation (mark, yank mode, multi-cursor) |
 
-### Modern Editor Features
+### Other Keystrokes
 
 | Keystrokes | Description |
 |------------|-------------|
@@ -26,11 +32,6 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 | `Ctrl + Alt + ↓` | Move the current line down |
 | `Ctrl + Shift + ↑` | Add a cursor on the line above |
 | `Ctrl + Shift + ↓` | Add a cursor on the line below |
-
-### Features
-- Hotkeys work properly even when using non-English input methods
-- Kill ring system with 120 entry storage capacity
-- Cut/copied text automatically syncs with system clipboard
 
 ## Installation
 
