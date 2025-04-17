@@ -58,9 +58,14 @@ export class MultiCursorPlugin {
     }
 
     public reset(editor: Editor): void {
-        if (this.mainPosition) {
-            editor.setCursor(this.mainPosition);
-            this.mainPosition = null;
+        const selections = editor.listSelections();
+        if (selections.length > 1) {
+            if (this.mainPosition) {
+                editor.setCursor(this.mainPosition);
+            } else {
+                editor.setCursor(selections[0].anchor);
+            }
         }
+        this.mainPosition = null;
     }
 }
