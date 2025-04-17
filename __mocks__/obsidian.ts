@@ -61,7 +61,9 @@ export class Editor implements IEditor {
   };
   on = jest.fn();
   markText = jest.fn().mockReturnValue({ clear: jest.fn() });
-  listSelections = jest.fn().mockReturnValue([{ anchor: { line: 0, ch: 0 }, head: { line: 0, ch: 0 } }]);
+  listSelections = jest
+    .fn()
+    .mockReturnValue([{ anchor: { line: 0, ch: 0 }, head: { line: 0, ch: 0 } }]);
 }
 
 export class MarkdownView implements IMarkdownView {

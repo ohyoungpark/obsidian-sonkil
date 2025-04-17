@@ -6,30 +6,31 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 ## Features
 
 ### Features
-- __Non-English Input Support__: Hotkeys work properly even when using non-English input methods
-- __Kill Ring__: Storage system with 120 entry capacity
-- __Clipboard Sync__: Cut/copied text automatically syncs with system clipboard
-- __Multi-cursor Kill Line__: Cut text from multiple cursor positions and store as a single paragraph
+
+- **Non-English Input Support**: Hotkeys work properly even when using non-English input methods
+- **Kill Ring**: Storage system with 120 entry capacity
+- **Clipboard Sync**: Cut/copied text automatically syncs with system clipboard
+- **Multi-cursor Kill Line**: Cut text from multiple cursor positions and store as a single paragraph
 
 ### Emacs-style Keystrokes
 
-| Keystrokes | Description |
-|------------|-------------|
-| `C-Space` | Set mark at current cursor position |
-| `C-k` | Cut text from cursor position to end of line (Kill Line) |
-| `C-w` | Cut text between mark and cursor (Kill Region) |
-| `M-w` | Copy text between mark and cursor (Copy Region) |
-| `C-y` | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
-| `M-y` | Cycle through previously cut text after yank (Yank Pop) |
-| `C-l` | Recenter editor view (cycles through Center/Top/Bottom) |
-| `C-g` | Cancel current operation (mark, yank mode, multi-cursor) |
+| Keystrokes | Description                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------- |
+| `C-Space`  | Set mark at current cursor position                                                               |
+| `C-k`      | Cut text from cursor position to end of line (Kill Line)                                          |
+| `C-w`      | Cut text between mark and cursor (Kill Region)                                                    |
+| `M-w`      | Copy text between mark and cursor (Copy Region)                                                   |
+| `C-y`      | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
+| `M-y`      | Cycle through previously cut text after yank (Yank Pop)                                           |
+| `C-l`      | Recenter editor view (cycles through Center/Top/Bottom)                                           |
+| `C-g`      | Cancel current operation (mark, yank mode, multi-cursor)                                          |
 
 ### Other Keystrokes
 
-| Keystrokes | Description |
-|------------|-------------|
-| `Ctrl + Alt + ↑` | Move the current line up |
-| `Ctrl + Alt + ↓` | Move the current line down |
+| Keystrokes         | Description                    |
+| ------------------ | ------------------------------ |
+| `Ctrl + Alt + ↑`   | Move the current line up       |
+| `Ctrl + Alt + ↓`   | Move the current line down     |
 | `Ctrl + Shift + ↑` | Add a cursor on the line above |
 | `Ctrl + Shift + ↓` | Add a cursor on the line below |
 
