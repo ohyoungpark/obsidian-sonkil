@@ -44,11 +44,11 @@ export default class SonkilPlugin extends Plugin {
   }
 
   private handleActiveLeafChange(leaf: unknown): void {
-    if (leaf && leaf instanceof MarkdownView) {
-      const view = leaf;
-      if (view && view.editor) {
-        this.setupListener(view.editor);
-      }
+    const view = (leaf as any)?.view;
+    const editor = view?.editor || view?.component?.editor;
+
+    if (editor) {
+      this.setupListener(editor);
     }
   }
 

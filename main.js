@@ -512,11 +512,11 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
     }
   }
   handleActiveLeafChange(leaf) {
-    if (leaf && leaf instanceof import_obsidian2.MarkdownView) {
-      const view = leaf;
-      if (view && view.editor) {
-        this.setupListener(view.editor);
-      }
+    var _a;
+    const view = leaf == null ? void 0 : leaf.view;
+    const editor = (view == null ? void 0 : view.editor) || ((_a = view == null ? void 0 : view.component) == null ? void 0 : _a.editor);
+    if (editor) {
+      this.setupListener(editor);
     }
   }
   async onload() {
