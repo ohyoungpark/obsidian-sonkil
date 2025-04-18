@@ -17,6 +17,11 @@ export class KillRing {
   }
 
   add(text: string): void {
+    const existingIndex = this.items.indexOf(text);
+    if (existingIndex !== -1) {
+      this.items.splice(existingIndex, 1);
+    }
+
     this.items.push(text);
 
     if (this.items.length > KILL_RING_MAX_SIZE) {

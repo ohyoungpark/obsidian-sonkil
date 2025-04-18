@@ -84,6 +84,10 @@ var KillRing = class {
     this.clipboard = clipboard;
   }
   add(text) {
+    const existingIndex = this.items.indexOf(text);
+    if (existingIndex !== -1) {
+      this.items.splice(existingIndex, 1);
+    }
     this.items.push(text);
     if (this.items.length > KILL_RING_MAX_SIZE) {
       this.items = this.items.slice(-KILL_RING_MAX_SIZE);
