@@ -3,11 +3,6 @@ import { KillRing } from './KillRing';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
 
-interface PositionsInterface {
-  mark: EditorPosition | null;
-  yank: EditorPosition | null;
-}
-
 interface MarkSelectionRange {
   from: number;
   to: number;
@@ -16,7 +11,8 @@ interface MarkSelectionRange {
 export const markSelectionEffect = StateEffect.define<MarkSelectionRange>();
 
 export class KillAndYankPlugin {
-  protected positions: PositionsInterface;
+  protected markPosition: EditorPosition | null = null;
+  protected yankPositions: EditorPosition[] = [];
   private killRing: KillRing;
   public markSelectionField = StateField.define<DecorationSet>({
     create() {
@@ -45,10 +41,6 @@ export class KillAndYankPlugin {
   });
 
   constructor(private plugin: Plugin) {
-    this.positions = {
-      mark: null,
-      yank: null,
-    };
     this.killRing = new KillRing();
     this.registerCommands();
   }
@@ -95,7 +87,6 @@ export class KillAndYankPlugin {
       name: 'Yank',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'y' }],
       editorCallback: (editor: Editor) => {
-        this.reset(editor);
         this.yank(editor);
       },
     });
@@ -105,7 +96,7 @@ export class KillAndYankPlugin {
       name: 'Yank pop',
       hotkeys: [{ modifiers: ['Alt'], key: 'y' }],
       editorCallback: (editor: Editor) => {
-        this.yank(editor);
+        this.yankPop(editor);
       },
     });
   }
@@ -145,8 +136,8 @@ export class KillAndYankPlugin {
   }
 
   protected killRegion(editor: Editor): void {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
+    if (this.markPosition) {
+      const from = this.markPosition;
       const to = editor.getCursor();
 
       const [start, end] = this.sortPositions(from, to);
@@ -165,8 +156,8 @@ export class KillAndYankPlugin {
   }
 
   protected copyRegion(editor: Editor): void {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
+    if (this.markPosition) {
+      const from = this.markPosition;
       const to = editor.getCursor();
 
       const [start, end] = this.sortPositions(from, to);
@@ -183,6 +174,11 @@ export class KillAndYankPlugin {
   }
 
   async yank(editor: Editor): Promise<void> {
+    this.resetYank();
+    await this.yankPop(editor);
+  }
+
+  async yankPop(editor: Editor): Promise<void> {
     if (this.killRing.getCurrentItem() === null) {
       const clipboardText = await navigator.clipboard.readText();
       if (clipboardText) {
@@ -190,44 +186,52 @@ export class KillAndYankPlugin {
       }
     }
 
-    const cursorPosition: EditorPosition = editor.getCursor();
+    const selections = editor.listSelections();
+    const cursorPositions = selections.map(selection => selection.head);
 
-    if (!this.positions.yank) {
-      this.positions.yank = cursorPosition;
+    if (!this.yankPositions.length) {
+      this.yankPositions = cursorPositions;
     } else {
       this.killRing.decreaseCurrentIndex();
     }
 
     const currentItem = this.killRing.getCurrentItem();
     if (currentItem) {
-      editor.setSelection(this.positions.yank, cursorPosition);
+      // Create selections for all cursors
+      const selections = cursorPositions.map((cursorPos, i) => ({
+        anchor: this.yankPositions[i],
+        head: cursorPos
+      }));
+
+      // Set all selections at once
+      editor.setSelections(selections);
       editor.replaceSelection(currentItem);
     }
   }
 
   protected setMark(editor: Editor): void {
     const cursorPosition: EditorPosition = editor.getCursor();
-    this.positions.mark = cursorPosition;
+    this.markPosition = cursorPosition;
   }
 
   public reset(editor: Editor): void {
-    this.positions.yank = null;
+    this.resetYank();
     this.resetMarkSelection(editor);
   }
 
   public resetYank(): void {
-    this.positions.yank = null;
+    this.yankPositions = [];
   }
 
   updateMarkSelection(editor: Editor, pos: number): void {
-    if (!this.positions.mark) {
+    if (!this.markPosition) {
       return;
     }
 
     const cm = (editor as unknown as { cm: EditorView }).cm;
     if (!cm) return;
 
-    const start = editor.posToOffset(this.positions.mark);
+    const start = editor.posToOffset(this.markPosition);
     const end = pos;
     const [from, to] = this.sortNumbers(start, end);
 
@@ -240,11 +244,11 @@ export class KillAndYankPlugin {
   }
 
   resetMarkSelection(editor: Editor): void {
-    if (!this.positions.mark) return;
+    if (!this.markPosition) return;
     const cm = (editor as unknown as { cm: EditorView }).cm;
     if (!cm) return;
 
-    this.positions.mark = null;
+    this.markPosition = null;
 
     cm.dispatch({
       effects: markSelectionEffect.of({ from: -1, to: -1 })

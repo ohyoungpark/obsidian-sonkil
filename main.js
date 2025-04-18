@@ -112,6 +112,8 @@ var markSelectionEffect = import_state.StateEffect.define();
 var KillAndYankPlugin = class {
   constructor(plugin) {
     this.plugin = plugin;
+    this.markPosition = null;
+    this.yankPositions = [];
     this.markSelectionField = import_state.StateField.define({
       create() {
         return import_view2.Decoration.none;
@@ -137,10 +139,6 @@ var KillAndYankPlugin = class {
       },
       provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
     });
-    this.positions = {
-      mark: null,
-      yank: null
-    };
     this.killRing = new KillRing();
     this.registerCommands();
   }
@@ -182,7 +180,6 @@ var KillAndYankPlugin = class {
       name: "Yank",
       hotkeys: [{ modifiers: ["Ctrl"], key: "y" }],
       editorCallback: (editor) => {
-        this.reset(editor);
         this.yank(editor);
       }
     });
@@ -191,7 +188,7 @@ var KillAndYankPlugin = class {
       name: "Yank pop",
       hotkeys: [{ modifiers: ["Alt"], key: "y" }],
       editorCallback: (editor) => {
-        this.yank(editor);
+        this.yankPop(editor);
       }
     });
   }
@@ -223,8 +220,8 @@ var KillAndYankPlugin = class {
     this.killRing.add(combinedText);
   }
   killRegion(editor) {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
+    if (this.markPosition) {
+      const from = this.markPosition;
       const to = editor.getCursor();
       const [start, end] = this.sortPositions(from, to);
       const text = editor.getRange(start, end);
@@ -240,8 +237,8 @@ var KillAndYankPlugin = class {
     }
   }
   copyRegion(editor) {
-    if (this.positions.mark) {
-      const from = this.positions.mark;
+    if (this.markPosition) {
+      const from = this.markPosition;
       const to = editor.getCursor();
       const [start, end] = this.sortPositions(from, to);
       const text = editor.getRange(start, end);
@@ -255,43 +252,52 @@ var KillAndYankPlugin = class {
     }
   }
   async yank(editor) {
+    this.resetYank();
+    await this.yankPop(editor);
+  }
+  async yankPop(editor) {
     if (this.killRing.getCurrentItem() === null) {
       const clipboardText = await navigator.clipboard.readText();
       if (clipboardText) {
         this.killRing.add(clipboardText);
       }
     }
-    const cursorPosition = editor.getCursor();
-    if (!this.positions.yank) {
-      this.positions.yank = cursorPosition;
+    const selections = editor.listSelections();
+    const cursorPositions = selections.map((selection) => selection.head);
+    if (!this.yankPositions.length) {
+      this.yankPositions = cursorPositions;
     } else {
       this.killRing.decreaseCurrentIndex();
     }
     const currentItem = this.killRing.getCurrentItem();
     if (currentItem) {
-      editor.setSelection(this.positions.yank, cursorPosition);
+      const selections2 = cursorPositions.map((cursorPos, i) => ({
+        anchor: this.yankPositions[i],
+        head: cursorPos
+      }));
+      editor.setSelections(selections2);
       editor.replaceSelection(currentItem);
     }
   }
   setMark(editor) {
     const cursorPosition = editor.getCursor();
-    this.positions.mark = cursorPosition;
+    this.markPosition = cursorPosition;
   }
   reset(editor) {
-    this.positions.yank = null;
+    this.resetYank();
     this.resetMarkSelection(editor);
   }
   resetYank() {
-    this.positions.yank = null;
+    this.yankPositions = [];
   }
   updateMarkSelection(editor, pos) {
-    if (!this.positions.mark) {
+    if (!this.markPosition) {
       return;
     }
     const cm = editor.cm;
     if (!cm)
       return;
-    const start = editor.posToOffset(this.positions.mark);
+    const start = editor.posToOffset(this.markPosition);
     const end = pos;
     const [from, to] = this.sortNumbers(start, end);
     if (from === to) {
@@ -302,12 +308,12 @@ var KillAndYankPlugin = class {
     });
   }
   resetMarkSelection(editor) {
-    if (!this.positions.mark)
+    if (!this.markPosition)
       return;
     const cm = editor.cm;
     if (!cm)
       return;
-    this.positions.mark = null;
+    this.markPosition = null;
     cm.dispatch({
       effects: markSelectionEffect.of({ from: -1, to: -1 })
     });

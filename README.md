@@ -12,6 +12,7 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 - **Clipboard Sync**: Cut/copied text automatically syncs with system clipboard
 - **Multi-cursor Kill Line**: Cut text from multiple cursor positions and store as a single paragraph
 - **Visual Mark Selection**: Selected text between mark and cursor is highlighted with a subtle background color
+- **Multi-cursor Yank**: Paste text at multiple cursor positions simultaneously
 
 ### Emacs-style Keystrokes
 
