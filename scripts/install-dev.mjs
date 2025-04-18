@@ -22,6 +22,7 @@ async function installDevPlugin() {
         // Copy manifest.json and main.js to the plugin directory
         await copyFile(join(rootDir, 'manifest.json'), join(pluginDir, 'manifest.json'));
         await copyFile(join(rootDir, 'main.js'), join(pluginDir, 'main.js'));
+        await copyFile(join(rootDir, 'styles.css'), join(pluginDir, 'styles.css'));
 
         console.log('Plugin files successfully copied to:', pluginDir);
     } catch (error) {

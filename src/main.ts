@@ -9,13 +9,48 @@ import { KillAndYankPlugin } from './KillAndYankPlugin';
 import { MultiCursorPlugin } from './MultiCursorPlugin';
 import { SwapPlugin } from './SwapPlugin';
 import { KeyController } from './KeyController';
+import { EditorView, ViewUpdate } from '@codemirror/view';
+import { Extension, StateEffect } from '@codemirror/state';
 
 export default class SonkilPlugin extends Plugin {
   private recenterPlugin!: RecenterCursorPlugin;
   private killAndYankPlugin!: KillAndYankPlugin;
   private multiCursorPlugin!: MultiCursorPlugin;
-  private swapPlugin!: SwapPlugin;
   private keyController!: KeyController;
+  private listener: Extension | null = null;
+
+  private setupListener(editor: Editor): void {
+    if (!this.listener) {
+      const cm = (editor as unknown as { cm: EditorView }).cm;
+      this.listener = EditorView.updateListener.of((update: ViewUpdate) => {
+        if (update.selectionSet) {
+          const from = update.startState.selection.main.head;
+          const to = update.state.selection.main.head;
+
+          if (update.docChanged && from !== to) {
+            this.killAndYankPlugin.resetMarkSelection(editor);
+          }
+          this.killAndYankPlugin.updateMarkSelection(editor, to);
+        }
+      });
+
+      cm.dispatch({
+        effects: StateEffect.appendConfig.of([
+          this.killAndYankPlugin.markSelectionField,
+          this.listener
+        ])
+      });
+    }
+  }
+
+  private handleActiveLeafChange(leaf: unknown): void {
+    if (leaf && leaf instanceof MarkdownView) {
+      const view = leaf;
+      if (view && view.editor) {
+        this.setupListener(view.editor);
+      }
+    }
+  }
 
   async onload() {
     console.log('Sonkil plugin loaded, kill ring initialized');
@@ -23,7 +58,7 @@ export default class SonkilPlugin extends Plugin {
     this.recenterPlugin = new RecenterCursorPlugin(this);
     this.killAndYankPlugin = new KillAndYankPlugin(this);
     this.multiCursorPlugin = new MultiCursorPlugin(this);
-    this.swapPlugin = new SwapPlugin(this);
+    new SwapPlugin(this);
 
     this.addCommand({
       id: 'sonkil-mode-quit',
@@ -41,6 +76,9 @@ export default class SonkilPlugin extends Plugin {
       'keydown',
       (evt: KeyboardEvent) => {
         const shouldBlockEvent = this.keyController.handleKeyEvent(evt);
+        if (shouldBlockEvent === null) {
+          this.killAndYankPlugin.resetYank();
+        }
         if (shouldBlockEvent) {
           evt.preventDefault();
           evt.stopPropagation();
@@ -58,10 +96,16 @@ export default class SonkilPlugin extends Plugin {
         }, 10);
       }
     });
+
+    this.registerEvent(
+      this.app.workspace.on('active-leaf-change', (leaf) => {
+        this.handleActiveLeafChange(leaf);
+      })
+    );
   }
 
   modeQuit(editor: Editor): void {
-    this.killAndYankPlugin.reset();
+    this.killAndYankPlugin.reset(editor);
     this.recenterPlugin.reset();
     this.multiCursorPlugin.reset(editor);
   }

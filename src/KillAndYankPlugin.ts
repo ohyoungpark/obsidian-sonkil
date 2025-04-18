@@ -1,14 +1,48 @@
 import { Editor, EditorPosition, Plugin } from 'obsidian';
 import { KillRing } from './KillRing';
+import { Prec, StateEffect, StateField } from '@codemirror/state';
+import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
 
 interface PositionsInterface {
   mark: EditorPosition | null;
   yank: EditorPosition | null;
 }
 
+interface MarkSelectionRange {
+  from: number;
+  to: number;
+}
+
+export const markSelectionEffect = StateEffect.define<MarkSelectionRange>();
+
 export class KillAndYankPlugin {
   protected positions: PositionsInterface;
   private killRing: KillRing;
+  public markSelectionField = StateField.define<DecorationSet>({
+    create() {
+      return Decoration.none;
+    },
+    update(value, tr) {
+      value = value.map(tr.changes);
+      for (const e of tr.effects) {
+        if (e.is(markSelectionEffect)) {
+          const range = e.value as MarkSelectionRange;
+          if (range.from === -1 && range.to === -1) {
+            value = Decoration.none;
+          } else {
+            value = Decoration.set([
+              Decoration.mark({
+                class: 'mark-selection',
+                attributes: { style: 'background-color: rgba(0, 120, 215, 0.2);' }
+              }).range(range.from, range.to)
+            ]);
+          }
+        }
+      }
+      return value;
+    },
+    provide: f => Prec.highest(EditorView.decorations.from(f))
+  });
 
   constructor(private plugin: Plugin) {
     this.positions = {
@@ -61,7 +95,7 @@ export class KillAndYankPlugin {
       name: 'Yank',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'y' }],
       editorCallback: (editor: Editor) => {
-        this.reset();
+        this.reset(editor);
         this.yank(editor);
       },
     });
@@ -78,6 +112,10 @@ export class KillAndYankPlugin {
 
   private sortPositions(a: EditorPosition, b: EditorPosition): [EditorPosition, EditorPosition] {
     return a.line < b.line || (a.line === b.line && a.ch <= b.ch) ? [a, b] : [b, a];
+  }
+
+  private sortNumbers(a: number, b: number): [number, number] {
+    return a <= b ? [a, b] : [b, a];
   }
 
   protected killLines(editor: Editor): void {
@@ -116,7 +154,7 @@ export class KillAndYankPlugin {
 
       this.killRing.add(text);
       editor.replaceRange('', start, end);
-      this.positions.mark = null;
+      this.resetMarkSelection(editor);
     } else {
       const selection = editor.getSelection();
       if (selection) {
@@ -135,7 +173,7 @@ export class KillAndYankPlugin {
       const text = editor.getRange(start, end);
 
       this.killRing.add(text);
-      this.positions.mark = null;
+      this.resetMarkSelection(editor);
     } else {
       const selection = editor.getSelection();
       if (selection) {
@@ -172,8 +210,44 @@ export class KillAndYankPlugin {
     this.positions.mark = cursorPosition;
   }
 
-  public reset(): void {
+  public reset(editor: Editor): void {
     this.positions.yank = null;
+    this.resetMarkSelection(editor);
+  }
+
+  public resetYank(): void {
+    this.positions.yank = null;
+  }
+
+  updateMarkSelection(editor: Editor, pos: number): void {
+    if (!this.positions.mark) {
+      return;
+    }
+
+    const cm = (editor as unknown as { cm: EditorView }).cm;
+    if (!cm) return;
+
+    const start = editor.posToOffset(this.positions.mark);
+    const end = pos;
+    const [from, to] = this.sortNumbers(start, end);
+
+    if (from === to) {
+      return;
+    }
+    cm.dispatch({
+      effects: markSelectionEffect.of({ from, to })
+    });
+  }
+
+  resetMarkSelection(editor: Editor): void {
+    if (!this.positions.mark) return;
+    const cm = (editor as unknown as { cm: EditorView }).cm;
+    if (!cm) return;
+
     this.positions.mark = null;
+
+    cm.dispatch({
+      effects: markSelectionEffect.of({ from: -1, to: -1 })
+    });
   }
 }

@@ -5,5 +5,8 @@
   "minAppVersion": "0.15.0",
   "description": "An Obsidian plugin",
   "author": "",
+  "css": [
+    "styles.css"
+  ],
   "isDesktopOnly": false
 }

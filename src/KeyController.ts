@@ -71,7 +71,7 @@ export class KeyController {
       });
   }
 
-  public handleKeyEvent(evt: KeyboardEvent): boolean {
+  public handleKeyEvent(evt: KeyboardEvent): boolean | null {
     const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) return false;
 
@@ -91,10 +91,8 @@ export class KeyController {
       }
     }
 
-    if (!['Control', 'Alt'].includes(evt.key)) {
-      (this.plugin.app as unknown as AppWithCommands).commands.executeCommandById(
-        'sonkil-mode-quit'
-      );
+    if (!['Control', 'Alt'].includes(evt.key)) {  // For reset yank
+      return null;
     }
 
     return false;

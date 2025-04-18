@@ -11,6 +11,7 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 - **Kill Ring**: Storage system with 120 entry capacity
 - **Clipboard Sync**: Cut/copied text automatically syncs with system clipboard
 - **Multi-cursor Kill Line**: Cut text from multiple cursor positions and store as a single paragraph
+- **Visual Mark Selection**: Selected text between mark and cursor is highlighted with a subtle background color
 
 ### Emacs-style Keystrokes
 
