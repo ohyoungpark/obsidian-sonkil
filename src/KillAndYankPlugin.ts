@@ -10,35 +10,38 @@ interface MarkSelectionRange {
 
 export const markSelectionEffect = StateEffect.define<MarkSelectionRange>();
 
+export const markSelectionField = StateField.define<DecorationSet>({
+  create() {
+    return Decoration.none;
+  },
+  update(value, tr) {
+    value = value.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(markSelectionEffect)) {
+        const range = e.value as MarkSelectionRange;
+        if (range.from === -1 && range.to === -1) {
+          value = Decoration.none;
+        } else {
+          value = Decoration.set([
+            Decoration.mark({
+              class: 'mark-selection',
+              attributes: { style: 'background-color: rgba(0, 120, 215, 0.2);' }
+            }).range(range.from, range.to)
+          ]);
+        }
+      }
+    }
+    return value;
+  },
+  provide: f => Prec.highest(EditorView.decorations.from(f))
+});
+
 export class KillAndYankPlugin {
   protected markPosition: EditorPosition | null = null;
   protected yankPositions: EditorPosition[] = [];
   private killRing: KillRing;
-  public markSelectionField = StateField.define<DecorationSet>({
-    create() {
-      return Decoration.none;
-    },
-    update(value, tr) {
-      value = value.map(tr.changes);
-      for (const e of tr.effects) {
-        if (e.is(markSelectionEffect)) {
-          const range = e.value as MarkSelectionRange;
-          if (range.from === -1 && range.to === -1) {
-            value = Decoration.none;
-          } else {
-            value = Decoration.set([
-              Decoration.mark({
-                class: 'mark-selection',
-                attributes: { style: 'background-color: rgba(0, 120, 215, 0.2);' }
-              }).range(range.from, range.to)
-            ]);
-          }
-        }
-      }
-      return value;
-    },
-    provide: f => Prec.highest(EditorView.decorations.from(f))
-  });
+
+  get markSelectionField() { return markSelectionField; }
 
   constructor(private plugin: Plugin) {
     this.killRing = new KillRing();

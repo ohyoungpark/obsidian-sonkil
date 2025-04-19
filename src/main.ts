@@ -2,53 +2,60 @@ import {
   Editor,
   MarkdownView,
   Plugin,
+  WorkspaceLeaf
 } from 'obsidian';
 
 import { RecenterCursorPlugin } from './RecenterCursorPlugin';
-import { KillAndYankPlugin } from './KillAndYankPlugin';
+import { KillAndYankPlugin, markSelectionField } from './KillAndYankPlugin';
 import { MultiCursorPlugin } from './MultiCursorPlugin';
 import { SwapPlugin } from './SwapPlugin';
 import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
-import { Extension, StateEffect } from '@codemirror/state';
+import { StateEffect } from '@codemirror/state';
 
 export default class SonkilPlugin extends Plugin {
   private recenterPlugin!: RecenterCursorPlugin;
   private killAndYankPlugin!: KillAndYankPlugin;
   private multiCursorPlugin!: MultiCursorPlugin;
   private keyController!: KeyController;
-  private listener: Extension | null = null;
 
   private setupListener(editor: Editor): void {
-    if (!this.listener) {
-      const cm = (editor as unknown as { cm: EditorView }).cm;
-      this.listener = EditorView.updateListener.of((update: ViewUpdate) => {
-        if (update.selectionSet) {
-          const from = update.startState.selection.main.head;
-          const to = update.state.selection.main.head;
+    const cm = (editor as unknown as { cm: EditorView }).cm;
 
-          if (update.docChanged && from !== to) {
-            this.killAndYankPlugin.resetMarkSelection(editor);
-          }
-          this.killAndYankPlugin.updateMarkSelection(editor, to);
-        }
-      });
-
-      cm.dispatch({
-        effects: StateEffect.appendConfig.of([
-          this.killAndYankPlugin.markSelectionField,
-          this.listener
-        ])
-      });
+    const currentField = cm.state.field(markSelectionField, false);
+    if (currentField) {
+      return;
     }
+
+    const listener = EditorView.updateListener.of((update: ViewUpdate) => {
+      if (update.selectionSet) {
+        const from = update.startState.selection.main.head;
+        const to = update.state.selection.main.head;
+        if (update.docChanged && from !== to) {
+          this.killAndYankPlugin.resetMarkSelection(editor);
+          return;
+        }
+        this.killAndYankPlugin.updateMarkSelection(editor, to);
+      }
+    });
+
+    cm.dispatch({
+      effects: StateEffect.appendConfig.of([
+        markSelectionField,
+        listener
+      ])
+    });
   }
 
-  private handleActiveLeafChange(leaf: unknown): void {
-    const view = (leaf as any)?.view;
-    const editor = view?.editor || view?.component?.editor;
+  private handleActiveLeafChange(leaf: WorkspaceLeaf | null): void {
+    if (!leaf?.view) return;
 
-    if (editor) {
-      this.setupListener(editor);
+    const view = leaf.view;
+    if (view instanceof MarkdownView) {
+      const editor = view.editor;
+      if (editor) {
+        this.setupListener(editor);
+      }
     }
   }
 
@@ -96,6 +103,11 @@ export default class SonkilPlugin extends Plugin {
         }, 10);
       }
     });
+
+    const currentView = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (currentView?.editor) {
+      this.setupListener(currentView.editor);
+    }
 
     this.registerEvent(
       this.app.workspace.on('active-leaf-change', (leaf) => {

@@ -113,38 +113,41 @@ var KillRing = class {
 var import_state = require("@codemirror/state");
 var import_view2 = require("@codemirror/view");
 var markSelectionEffect = import_state.StateEffect.define();
+var markSelectionField = import_state.StateField.define({
+  create() {
+    return import_view2.Decoration.none;
+  },
+  update(value, tr) {
+    value = value.map(tr.changes);
+    for (const e of tr.effects) {
+      if (e.is(markSelectionEffect)) {
+        const range = e.value;
+        if (range.from === -1 && range.to === -1) {
+          value = import_view2.Decoration.none;
+        } else {
+          value = import_view2.Decoration.set([
+            import_view2.Decoration.mark({
+              class: "mark-selection",
+              attributes: { style: "background-color: rgba(0, 120, 215, 0.2);" }
+            }).range(range.from, range.to)
+          ]);
+        }
+      }
+    }
+    return value;
+  },
+  provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
+});
 var KillAndYankPlugin = class {
   constructor(plugin) {
     this.plugin = plugin;
     this.markPosition = null;
     this.yankPositions = [];
-    this.markSelectionField = import_state.StateField.define({
-      create() {
-        return import_view2.Decoration.none;
-      },
-      update(value, tr) {
-        value = value.map(tr.changes);
-        for (const e of tr.effects) {
-          if (e.is(markSelectionEffect)) {
-            const range = e.value;
-            if (range.from === -1 && range.to === -1) {
-              value = import_view2.Decoration.none;
-            } else {
-              value = import_view2.Decoration.set([
-                import_view2.Decoration.mark({
-                  class: "mark-selection",
-                  attributes: { style: "background-color: rgba(0, 120, 215, 0.2);" }
-                }).range(range.from, range.to)
-              ]);
-            }
-          }
-        }
-        return value;
-      },
-      provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
-    });
     this.killRing = new KillRing();
     this.registerCommands();
+  }
+  get markSelectionField() {
+    return markSelectionField;
   }
   registerCommands() {
     this.plugin.addCommand({
@@ -490,37 +493,39 @@ var KeyController = class {
 var import_view3 = require("@codemirror/view");
 var import_state2 = require("@codemirror/state");
 var SonkilPlugin = class extends import_obsidian2.Plugin {
-  constructor() {
-    super(...arguments);
-    this.listener = null;
-  }
   setupListener(editor) {
-    if (!this.listener) {
-      const cm = editor.cm;
-      this.listener = import_view3.EditorView.updateListener.of((update) => {
-        if (update.selectionSet) {
-          const from = update.startState.selection.main.head;
-          const to = update.state.selection.main.head;
-          if (update.docChanged && from !== to) {
-            this.killAndYankPlugin.resetMarkSelection(editor);
-          }
-          this.killAndYankPlugin.updateMarkSelection(editor, to);
-        }
-      });
-      cm.dispatch({
-        effects: import_state2.StateEffect.appendConfig.of([
-          this.killAndYankPlugin.markSelectionField,
-          this.listener
-        ])
-      });
+    const cm = editor.cm;
+    const currentField = cm.state.field(markSelectionField, false);
+    if (currentField) {
+      return;
     }
+    const listener = import_view3.EditorView.updateListener.of((update) => {
+      if (update.selectionSet) {
+        const from = update.startState.selection.main.head;
+        const to = update.state.selection.main.head;
+        if (update.docChanged && from !== to) {
+          this.killAndYankPlugin.resetMarkSelection(editor);
+          return;
+        }
+        this.killAndYankPlugin.updateMarkSelection(editor, to);
+      }
+    });
+    cm.dispatch({
+      effects: import_state2.StateEffect.appendConfig.of([
+        markSelectionField,
+        listener
+      ])
+    });
   }
   handleActiveLeafChange(leaf) {
-    var _a;
-    const view = leaf == null ? void 0 : leaf.view;
-    const editor = (view == null ? void 0 : view.editor) || ((_a = view == null ? void 0 : view.component) == null ? void 0 : _a.editor);
-    if (editor) {
-      this.setupListener(editor);
+    if (!(leaf == null ? void 0 : leaf.view))
+      return;
+    const view = leaf.view;
+    if (view instanceof import_obsidian2.MarkdownView) {
+      const editor = view.editor;
+      if (editor) {
+        this.setupListener(editor);
+      }
     }
   }
   async onload() {
@@ -562,6 +567,10 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
         }, 10);
       }
     });
+    const currentView = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
+    if (currentView == null ? void 0 : currentView.editor) {
+      this.setupListener(currentView.editor);
+    }
     this.registerEvent(
       this.app.workspace.on("active-leaf-change", (leaf) => {
         this.handleActiveLeafChange(leaf);
