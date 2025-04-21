@@ -13,6 +13,7 @@ import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { StatusBarManager, IStatusBarManager } from './StatusBarManager';
+import { AddCommand } from './types';
 
 export default class SonkilPlugin extends Plugin {
   private recenterPlugin!: RecenterCursorPlugin;
@@ -66,10 +67,12 @@ export default class SonkilPlugin extends Plugin {
 
     this.statusBarManager = new StatusBarManager(this);
 
-    this.recenterPlugin = new RecenterCursorPlugin(this);
-    this.killAndYankPlugin = new KillAndYankPlugin(this, this.statusBarManager);
-    this.multiCursorPlugin = new MultiCursorPlugin(this);
-    new SwapPlugin(this);
+    const addCommand = this.addCommand.bind(this) as AddCommand;
+
+    this.recenterPlugin = new RecenterCursorPlugin(addCommand);
+    this.killAndYankPlugin = new KillAndYankPlugin(addCommand, this.statusBarManager);
+    this.multiCursorPlugin = new MultiCursorPlugin(addCommand);
+    new SwapPlugin(addCommand);
 
     this.addCommand({
       id: 'sonkil-mode-quit',

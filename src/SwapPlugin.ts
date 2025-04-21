@@ -1,12 +1,13 @@
-import { Editor, Plugin } from 'obsidian';
+import { Editor } from 'obsidian';
+import { AddCommand } from './types';
 
 export class SwapPlugin {
-  constructor(private plugin: Plugin) {
+  constructor(private addCommand: AddCommand) {
     this.registerCommands();
   }
 
   private registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-move-line-up',
       name: 'Move line up',
       hotkeys: [{ modifiers: ['Ctrl', 'Alt'], key: 'ArrowUp' }],
@@ -15,7 +16,7 @@ export class SwapPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-move-line-down',
       name: 'Move line down',
       hotkeys: [{ modifiers: ['Ctrl', 'Alt'], key: 'ArrowDown' }],

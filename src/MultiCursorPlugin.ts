@@ -1,14 +1,15 @@
-import { Editor, EditorPosition, Plugin } from 'obsidian';
+import { Editor, EditorPosition } from 'obsidian';
+import { AddCommand } from './types';
 
 export class MultiCursorPlugin {
   private mainPosition: EditorPosition | null = null;
 
-  constructor(private plugin: Plugin) {
+  constructor(private addCommand: AddCommand) {
     this.registerCommands();
   }
 
   private registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-add-cursor-up',
       name: 'Add cursor up',
       hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'ArrowUp' }],
@@ -17,7 +18,7 @@ export class MultiCursorPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-add-cursor-down',
       name: 'Add cursor down',
       hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'ArrowDown' }],

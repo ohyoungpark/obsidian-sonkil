@@ -1,21 +1,22 @@
-import { Editor, Plugin } from 'obsidian';
+import { Editor } from 'obsidian';
 import { EditorView } from '@codemirror/view';
+import { AddCommand } from './types';
 
 export class RecenterCursorPlugin {
   private modes = ['center', 'start', 'end'] as const;
   private currentIndex = 0;
 
-  constructor(private plugin: Plugin) {
+  constructor(private addCommand: AddCommand) {
     this.registerCommands();
   }
 
   private registerCommands() {
-    this.plugin.addCommand({
-      id: 'sonkil-recenter-editor',
-      name: 'Recenter editor',
+    this.addCommand({
+      id: 'sonkil-recenter',
+      name: 'Recenter editor view',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'l' }],
       editorCallback: (editor: Editor) => {
-        this.recenterEditor(editor);
+        this.recenter(editor);
       },
     });
   }
@@ -32,7 +33,7 @@ export class RecenterCursorPlugin {
     }
   }
 
-  protected recenterEditor(editor: Editor): void {
+  protected recenter(editor: Editor): void {
     // Obsidian's Editor has an internal cm property that's not exposed in the type definitions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const cmView = (editor as any).cm as EditorView;

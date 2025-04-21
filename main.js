@@ -33,19 +33,19 @@ var import_obsidian2 = require("obsidian");
 // src/RecenterCursorPlugin.ts
 var import_view = require("@codemirror/view");
 var RecenterCursorPlugin = class {
-  constructor(plugin) {
-    this.plugin = plugin;
+  constructor(addCommand) {
+    this.addCommand = addCommand;
     this.modes = ["center", "start", "end"];
     this.currentIndex = 0;
     this.registerCommands();
   }
   registerCommands() {
-    this.plugin.addCommand({
-      id: "sonkil-recenter-editor",
-      name: "Recenter editor",
+    this.addCommand({
+      id: "sonkil-recenter",
+      name: "Recenter editor view",
       hotkeys: [{ modifiers: ["Ctrl"], key: "l" }],
       editorCallback: (editor) => {
-        this.recenterEditor(editor);
+        this.recenter(editor);
       }
     });
   }
@@ -59,7 +59,7 @@ var RecenterCursorPlugin = class {
       this.currentIndex = 0;
     }
   }
-  recenterEditor(editor) {
+  recenter(editor) {
     const cmView = editor.cm;
     if (!cmView)
       return;
@@ -139,8 +139,8 @@ var markSelectionField = import_state.StateField.define({
   provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
 });
 var KillAndYankPlugin = class {
-  constructor(plugin, statusBarManager) {
-    this.plugin = plugin;
+  constructor(addCommand, statusBarManager) {
+    this.addCommand = addCommand;
     this.statusBarManager = statusBarManager;
     this.markPosition = null;
     this.yankPositions = [];
@@ -151,7 +151,7 @@ var KillAndYankPlugin = class {
     return markSelectionField;
   }
   registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-set-mark",
       name: "Set mark",
       hotkeys: [{ modifiers: ["Ctrl"], key: " " }],
@@ -159,7 +159,7 @@ var KillAndYankPlugin = class {
         this.setMark(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-kill-line",
       name: "Kill line",
       hotkeys: [{ modifiers: ["Ctrl"], key: "k" }],
@@ -167,7 +167,7 @@ var KillAndYankPlugin = class {
         this.killLines(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-kill-region",
       name: "Kill region",
       hotkeys: [{ modifiers: ["Ctrl"], key: "w" }],
@@ -175,7 +175,7 @@ var KillAndYankPlugin = class {
         this.killRegion(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-copy-region",
       name: "Copy region",
       hotkeys: [{ modifiers: ["Alt"], key: "w" }],
@@ -183,7 +183,7 @@ var KillAndYankPlugin = class {
         this.copyRegion(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-yank",
       name: "Yank",
       hotkeys: [{ modifiers: ["Ctrl"], key: "y" }],
@@ -191,7 +191,7 @@ var KillAndYankPlugin = class {
         this.yank(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-yank-pop",
       name: "Yank pop",
       hotkeys: [{ modifiers: ["Alt"], key: "y" }],
@@ -347,13 +347,13 @@ var KillAndYankPlugin = class {
 
 // src/MultiCursorPlugin.ts
 var MultiCursorPlugin = class {
-  constructor(plugin) {
-    this.plugin = plugin;
+  constructor(addCommand) {
+    this.addCommand = addCommand;
     this.mainPosition = null;
     this.registerCommands();
   }
   registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-add-cursor-up",
       name: "Add cursor up",
       hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "ArrowUp" }],
@@ -361,7 +361,7 @@ var MultiCursorPlugin = class {
         this.addCursor(editor, "up");
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-add-cursor-down",
       name: "Add cursor down",
       hotkeys: [{ modifiers: ["Ctrl", "Shift"], key: "ArrowDown" }],
@@ -406,12 +406,12 @@ var MultiCursorPlugin = class {
 
 // src/SwapPlugin.ts
 var SwapPlugin = class {
-  constructor(plugin) {
-    this.plugin = plugin;
+  constructor(addCommand) {
+    this.addCommand = addCommand;
     this.registerCommands();
   }
   registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-move-line-up",
       name: "Move line up",
       hotkeys: [{ modifiers: ["Ctrl", "Alt"], key: "ArrowUp" }],
@@ -419,7 +419,7 @@ var SwapPlugin = class {
         this.moveLineUp(editor);
       }
     });
-    this.plugin.addCommand({
+    this.addCommand({
       id: "sonkil-move-line-down",
       name: "Move line down",
       hotkeys: [{ modifiers: ["Ctrl", "Alt"], key: "ArrowDown" }],
@@ -595,10 +595,11 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
   async onload() {
     console.log("Sonkil plugin loaded, kill ring initialized");
     this.statusBarManager = new StatusBarManager(this);
-    this.recenterPlugin = new RecenterCursorPlugin(this);
-    this.killAndYankPlugin = new KillAndYankPlugin(this, this.statusBarManager);
-    this.multiCursorPlugin = new MultiCursorPlugin(this);
-    new SwapPlugin(this);
+    const addCommand = this.addCommand.bind(this);
+    this.recenterPlugin = new RecenterCursorPlugin(addCommand);
+    this.killAndYankPlugin = new KillAndYankPlugin(addCommand, this.statusBarManager);
+    this.multiCursorPlugin = new MultiCursorPlugin(addCommand);
+    new SwapPlugin(addCommand);
     this.addCommand({
       id: "sonkil-mode-quit",
       name: "Cancel mark and exit yank mode",

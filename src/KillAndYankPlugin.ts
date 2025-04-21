@@ -1,10 +1,11 @@
-import { Editor, EditorPosition, Plugin } from 'obsidian';
+import { Editor, EditorPosition } from 'obsidian';
 import { KillRing } from './KillRing';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
 import { IStatusBarManager } from './StatusBarManager';
+import { AddCommand } from './types';
 
-interface MarkSelectionRange {
+export interface MarkSelectionRange {
   from: number;
   to: number;
 }
@@ -45,7 +46,7 @@ export class KillAndYankPlugin {
   get markSelectionField() { return markSelectionField; }
 
   constructor(
-    private plugin: Plugin,
+    private addCommand: AddCommand,
     private statusBarManager: IStatusBarManager
   ) {
     this.killRing = new KillRing();
@@ -53,7 +54,7 @@ export class KillAndYankPlugin {
   }
 
   private registerCommands() {
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-set-mark',
       name: 'Set mark',
       hotkeys: [{ modifiers: ['Ctrl'], key: ' ' }],
@@ -62,7 +63,7 @@ export class KillAndYankPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-kill-line',
       name: 'Kill line',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'k' }],
@@ -71,7 +72,7 @@ export class KillAndYankPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-kill-region',
       name: 'Kill region',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'w' }],
@@ -80,7 +81,7 @@ export class KillAndYankPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-copy-region',
       name: 'Copy region',
       hotkeys: [{ modifiers: ['Alt'], key: 'w' }],
@@ -89,7 +90,7 @@ export class KillAndYankPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-yank',
       name: 'Yank',
       hotkeys: [{ modifiers: ['Ctrl'], key: 'y' }],
@@ -98,7 +99,7 @@ export class KillAndYankPlugin {
       },
     });
 
-    this.plugin.addCommand({
+    this.addCommand({
       id: 'sonkil-yank-pop',
       name: 'Yank pop',
       hotkeys: [{ modifiers: ['Alt'], key: 'y' }],
