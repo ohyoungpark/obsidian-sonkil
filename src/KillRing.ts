@@ -3,14 +3,14 @@ export interface ClipboardInterface {
   readText(): Promise<string>;
 }
 
-const KILL_RING_MAX_SIZE = 120;
+export const KILL_RING_MAX_SIZE = 120;
 
 export class KillRing {
   protected items: string[];
   protected currentIndex: number;
   protected clipboard: ClipboardInterface;
 
-  constructor(clipboard: ClipboardInterface = navigator.clipboard) {
+  constructor(clipboard: ClipboardInterface) {
     this.items = [];
     this.currentIndex = -1;
     this.clipboard = clipboard;

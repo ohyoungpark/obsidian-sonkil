@@ -14,6 +14,7 @@ import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { StatusBarManager, IStatusBarManager } from './StatusBarManager';
 import { AddCommand } from './types';
+import { KeyDownEventResult } from './types';
 
 export default class SonkilPlugin extends Plugin {
   private recenterPlugin!: RecenterCursorPlugin;
@@ -83,17 +84,17 @@ export default class SonkilPlugin extends Plugin {
       }
     });
 
-    this.keyController = new KeyController(this);
+    this.keyController = new KeyController(this);  // IMPORTANT: this must be initialized after the addCommand is bound
 
     this.registerDomEvent(
       document,
       'keydown',
       (evt: KeyboardEvent) => {
-        const shouldBlockEvent = this.keyController.handleKeyEvent(evt);
-        if (shouldBlockEvent === null) {
+        const result: KeyDownEventResult = this.keyController.handleKeyEvent(evt);
+        if (result === KeyDownEventResult.RESET_YANK) {
           this.killAndYankPlugin.resetYank();
         }
-        if (shouldBlockEvent) {
+        if (result === KeyDownEventResult.BLOCK_AND_EXECUTE) {
           evt.preventDefault();
           evt.stopPropagation();
         }

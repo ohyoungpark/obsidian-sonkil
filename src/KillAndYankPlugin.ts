@@ -1,5 +1,5 @@
 import { Editor, EditorPosition } from 'obsidian';
-import { KillRing } from './KillRing';
+import { KillRing, ClipboardInterface } from './KillRing';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
 import { IStatusBarManager } from './StatusBarManager';
@@ -42,14 +42,17 @@ export class KillAndYankPlugin {
   protected markPosition: EditorPosition | null = null;
   protected yankPositions: EditorPosition[] = [];
   private killRing: KillRing;
+  private clipboard: ClipboardInterface;
 
   get markSelectionField() { return markSelectionField; }
 
   constructor(
     private addCommand: AddCommand,
-    private statusBarManager: IStatusBarManager
+    private statusBarManager: IStatusBarManager,
+    clipboard: ClipboardInterface = navigator.clipboard
   ) {
-    this.killRing = new KillRing();
+    this.clipboard = clipboard;
+    this.killRing = new KillRing(clipboard);
     this.registerCommands();
   }
 
@@ -188,7 +191,7 @@ export class KillAndYankPlugin {
 
   async yankPop(editor: Editor): Promise<void> {
     if (this.killRing.getCurrentItem() === null) {
-      const clipboardText = await navigator.clipboard.readText();
+      const clipboardText = await this.clipboard.readText();
       if (clipboardText) {
         this.killRing.add(clipboardText);
       }
@@ -250,7 +253,7 @@ export class KillAndYankPlugin {
     this.yankPositions = [];
   }
 
-  updateMarkSelection(editor: Editor, pos: number): void {
+  public updateMarkSelection(editor: Editor, pos: number): void {
     this.statusBarManager.clear();
     if (!this.markPosition) return;
 
@@ -270,7 +273,7 @@ export class KillAndYankPlugin {
     });
   }
 
-  resetMarkSelection(editor: Editor): void {
+  public resetMarkSelection(editor: Editor): void {
     if (!this.markPosition) return;
     const cm = (editor as unknown as { cm: EditorView }).cm;
     if (!cm) return;

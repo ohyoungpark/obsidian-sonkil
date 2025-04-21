@@ -78,7 +78,7 @@ var RecenterCursorPlugin = class {
 // src/KillRing.ts
 var KILL_RING_MAX_SIZE = 120;
 var KillRing = class {
-  constructor(clipboard = navigator.clipboard) {
+  constructor(clipboard) {
     this.items = [];
     this.currentIndex = -1;
     this.clipboard = clipboard;
@@ -139,12 +139,13 @@ var markSelectionField = import_state.StateField.define({
   provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
 });
 var KillAndYankPlugin = class {
-  constructor(addCommand, statusBarManager) {
+  constructor(addCommand, statusBarManager, clipboard = navigator.clipboard) {
     this.addCommand = addCommand;
     this.statusBarManager = statusBarManager;
     this.markPosition = null;
     this.yankPositions = [];
-    this.killRing = new KillRing();
+    this.clipboard = clipboard;
+    this.killRing = new KillRing(clipboard);
     this.registerCommands();
   }
   get markSelectionField() {
@@ -265,7 +266,7 @@ var KillAndYankPlugin = class {
   }
   async yankPop(editor) {
     if (this.killRing.getCurrentItem() === null) {
-      const clipboardText = await navigator.clipboard.readText();
+      const clipboardText = await this.clipboard.readText();
       if (clipboardText) {
         this.killRing.add(clipboardText);
       }
@@ -478,10 +479,10 @@ var KeyController = class {
   handleKeyEvent(evt) {
     const view = this.plugin.app.workspace.getActiveViewOfType(import_obsidian.MarkdownView);
     if (!view)
-      return false;
+      return "DO_NOTHING" /* DO_NOTHING */;
     const target = evt.target;
     if (target.classList.contains("inline-title") || target.closest(".inline-title") !== null) {
-      return false;
+      return "DO_NOTHING" /* DO_NOTHING */;
     }
     if (evt.ctrlKey || evt.altKey || evt.key === "Escape") {
       for (const binding of this.keyBindings) {
@@ -489,14 +490,14 @@ var KeyController = class {
           this.plugin.app.commands.executeCommandById(
             binding.commandId
           );
-          return true;
+          return "BLOCK_AND_EXECUTE" /* BLOCK_AND_EXECUTE */;
         }
       }
     }
     if (!["Control", "Alt"].includes(evt.key)) {
-      return null;
+      return "RESET_YANK" /* RESET_YANK */;
     }
-    return false;
+    return "DO_NOTHING" /* DO_NOTHING */;
   }
   isKeyBindingMatch(evt, binding) {
     const keyPressed = evt.key.toLowerCase();
@@ -613,11 +614,11 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
       document,
       "keydown",
       (evt) => {
-        const shouldBlockEvent = this.keyController.handleKeyEvent(evt);
-        if (shouldBlockEvent === null) {
+        const result = this.keyController.handleKeyEvent(evt);
+        if (result === "RESET_YANK" /* RESET_YANK */) {
           this.killAndYankPlugin.resetYank();
         }
-        if (shouldBlockEvent) {
+        if (result === "BLOCK_AND_EXECUTE" /* BLOCK_AND_EXECUTE */) {
           evt.preventDefault();
           evt.stopPropagation();
         }

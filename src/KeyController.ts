@@ -1,4 +1,5 @@
 import { MarkdownView, Plugin } from 'obsidian';
+import { KeyDownEventResult } from './types';
 
 interface KeyModifiers {
   ctrlKey: boolean;
@@ -30,7 +31,7 @@ interface AppWithCommands {
 }
 
 export class KeyController {
-  private keyBindings: KeyBinding[] = [];
+  protected keyBindings: KeyBinding[] = [];
   private readonly KeyToCodeMap: Record<string, string> = {
     ' ': 'Space',
     g: 'KeyG',
@@ -71,13 +72,13 @@ export class KeyController {
       });
   }
 
-  public handleKeyEvent(evt: KeyboardEvent): boolean | null {
+  public handleKeyEvent(evt: KeyboardEvent): KeyDownEventResult {
     const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!view) return false;
+    if (!view) return KeyDownEventResult.DO_NOTHING;
 
     const target = evt.target as HTMLElement;
     if (target.classList.contains('inline-title') || target.closest('.inline-title') !== null) {
-      return false;
+      return KeyDownEventResult.DO_NOTHING;
     }
 
     if (evt.ctrlKey || evt.altKey || evt.key === 'Escape') {
@@ -86,16 +87,16 @@ export class KeyController {
           (this.plugin.app as unknown as AppWithCommands).commands.executeCommandById(
             binding.commandId
           );
-          return true;
+          return KeyDownEventResult.BLOCK_AND_EXECUTE;
         }
       }
     }
 
     if (!['Control', 'Alt'].includes(evt.key)) {  // For reset yank
-      return null;
+      return KeyDownEventResult.RESET_YANK;
     }
 
-    return false;
+    return KeyDownEventResult.DO_NOTHING;
   }
 
   private isKeyBindingMatch(evt: KeyboardEvent, binding: KeyBinding): boolean {
