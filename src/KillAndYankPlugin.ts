@@ -2,6 +2,7 @@ import { Editor, EditorPosition, Plugin } from 'obsidian';
 import { KillRing } from './KillRing';
 import { Prec, StateEffect, StateField } from '@codemirror/state';
 import { Decoration, DecorationSet, EditorView } from '@codemirror/view';
+import { IStatusBarManager } from './StatusBarManager';
 
 interface MarkSelectionRange {
   from: number;
@@ -43,7 +44,10 @@ export class KillAndYankPlugin {
 
   get markSelectionField() { return markSelectionField; }
 
-  constructor(private plugin: Plugin) {
+  constructor(
+    private plugin: Plugin,
+    private statusBarManager: IStatusBarManager
+  ) {
     this.killRing = new KillRing();
     this.registerCommands();
   }
@@ -214,6 +218,25 @@ export class KillAndYankPlugin {
 
   protected setMark(editor: Editor): void {
     const cursorPosition: EditorPosition = editor.getCursor();
+
+    if (this.markPosition) {
+      this.resetMarkSelection(editor);
+      if (this.statusBarManager.getStatus() === 'MarkDeactivated') {
+        this.statusBarManager.setStatus('MarkActivated');
+      } else if (this.statusBarManager.isEmpty()) {
+        this.statusBarManager.setStatus('MarkSet');
+      } else {
+        this.statusBarManager.setStatus('MarkDeactivated');
+        return;
+      }
+    } else {
+      if (this.statusBarManager.isEmpty()) {
+        this.statusBarManager.setStatus('MarkSet');
+      } else {
+        this.statusBarManager.setStatus('MarkActivated');
+      }
+    }
+
     this.markPosition = cursorPosition;
   }
 
@@ -227,9 +250,8 @@ export class KillAndYankPlugin {
   }
 
   updateMarkSelection(editor: Editor, pos: number): void {
-    if (!this.markPosition) {
-      return;
-    }
+    this.statusBarManager.clear();
+    if (!this.markPosition) return;
 
     const cm = (editor as unknown as { cm: EditorView }).cm;
     if (!cm) return;
@@ -238,9 +260,10 @@ export class KillAndYankPlugin {
     const end = pos;
     const [from, to] = this.sortNumbers(start, end);
 
-    if (from === to) {
-      return;
-    }
+    if (from === to) return;
+
+    this.statusBarManager.clear();
+
     cm.dispatch({
       effects: markSelectionEffect.of({ from, to })
     });

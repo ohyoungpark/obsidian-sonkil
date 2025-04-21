@@ -139,8 +139,9 @@ var markSelectionField = import_state.StateField.define({
   provide: (f) => import_state.Prec.highest(import_view2.EditorView.decorations.from(f))
 });
 var KillAndYankPlugin = class {
-  constructor(plugin) {
+  constructor(plugin, statusBarManager) {
     this.plugin = plugin;
+    this.statusBarManager = statusBarManager;
     this.markPosition = null;
     this.yankPositions = [];
     this.killRing = new KillRing();
@@ -288,6 +289,23 @@ var KillAndYankPlugin = class {
   }
   setMark(editor) {
     const cursorPosition = editor.getCursor();
+    if (this.markPosition) {
+      this.resetMarkSelection(editor);
+      if (this.statusBarManager.getStatus() === "MarkDeactivated") {
+        this.statusBarManager.setStatus("MarkActivated");
+      } else if (this.statusBarManager.isEmpty()) {
+        this.statusBarManager.setStatus("MarkSet");
+      } else {
+        this.statusBarManager.setStatus("MarkDeactivated");
+        return;
+      }
+    } else {
+      if (this.statusBarManager.isEmpty()) {
+        this.statusBarManager.setStatus("MarkSet");
+      } else {
+        this.statusBarManager.setStatus("MarkActivated");
+      }
+    }
     this.markPosition = cursorPosition;
   }
   reset(editor) {
@@ -298,18 +316,18 @@ var KillAndYankPlugin = class {
     this.yankPositions = [];
   }
   updateMarkSelection(editor, pos) {
-    if (!this.markPosition) {
+    this.statusBarManager.clear();
+    if (!this.markPosition)
       return;
-    }
     const cm = editor.cm;
     if (!cm)
       return;
     const start = editor.posToOffset(this.markPosition);
     const end = pos;
     const [from, to] = this.sortNumbers(start, end);
-    if (from === to) {
+    if (from === to)
       return;
-    }
+    this.statusBarManager.clear();
     cm.dispatch({
       effects: markSelectionEffect.of({ from, to })
     });
@@ -492,6 +510,52 @@ var KeyController = class {
 // src/main.ts
 var import_view3 = require("@codemirror/view");
 var import_state2 = require("@codemirror/state");
+
+// src/StatusBarManager.ts
+var StatusBarManager = class {
+  constructor(plugin) {
+    this.plugin = plugin;
+    this.statusBarEl = null;
+    this.currentStatus = "EMPTY";
+    this.statusTexts = {
+      EMPTY: "",
+      MarkActivated: "Mark Activated",
+      MarkDeactivated: "Mark Deactivated",
+      MarkSet: "Mark Set"
+    };
+    this.statusBarEl = plugin.addStatusBarItem();
+    this.setText(this.statusTexts.EMPTY);
+  }
+  setText(text) {
+    if (this.statusBarEl) {
+      this.statusBarEl.textContent = text;
+    }
+  }
+  getText() {
+    var _a;
+    return ((_a = this.statusBarEl) == null ? void 0 : _a.textContent) || "";
+  }
+  setStatus(type) {
+    this.currentStatus = type;
+    this.setText(this.statusTexts[type]);
+  }
+  getStatus() {
+    return this.currentStatus;
+  }
+  isEmpty() {
+    return this.currentStatus === "EMPTY";
+  }
+  clear() {
+    if (this.statusBarEl) {
+      this.setStatus("EMPTY");
+    }
+  }
+  getElement() {
+    return this.statusBarEl;
+  }
+};
+
+// src/main.ts
 var SonkilPlugin = class extends import_obsidian2.Plugin {
   setupListener(editor) {
     const cm = editor.cm;
@@ -530,8 +594,9 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
   }
   async onload() {
     console.log("Sonkil plugin loaded, kill ring initialized");
+    this.statusBarManager = new StatusBarManager(this);
     this.recenterPlugin = new RecenterCursorPlugin(this);
-    this.killAndYankPlugin = new KillAndYankPlugin(this);
+    this.killAndYankPlugin = new KillAndYankPlugin(this, this.statusBarManager);
     this.multiCursorPlugin = new MultiCursorPlugin(this);
     new SwapPlugin(this);
     this.addCommand({
@@ -576,6 +641,12 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
         this.handleActiveLeafChange(leaf);
       })
     );
+  }
+  async onunload() {
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian2.MarkdownView);
+    if (view == null ? void 0 : view.editor) {
+      this.modeQuit(view.editor);
+    }
   }
   modeQuit(editor) {
     this.killAndYankPlugin.reset(editor);

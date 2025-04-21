@@ -13,6 +13,7 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 - **Multi-cursor Kill Line**: Cut text from multiple cursor positions and store as a single paragraph
 - **Visual Mark Selection**: Selected text between mark and cursor is highlighted with a subtle background color
 - **Multi-cursor Yank**: Paste text at multiple cursor positions simultaneously
+- **Status Bar Feedback**: Shows current operation status in the status bar
 
 ### Emacs-style Keystrokes
 

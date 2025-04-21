@@ -12,12 +12,14 @@ import { SwapPlugin } from './SwapPlugin';
 import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
+import { StatusBarManager, IStatusBarManager } from './StatusBarManager';
 
 export default class SonkilPlugin extends Plugin {
   private recenterPlugin!: RecenterCursorPlugin;
   private killAndYankPlugin!: KillAndYankPlugin;
   private multiCursorPlugin!: MultiCursorPlugin;
   private keyController!: KeyController;
+  private statusBarManager: IStatusBarManager;
 
   private setupListener(editor: Editor): void {
     const cm = (editor as unknown as { cm: EditorView }).cm;
@@ -62,8 +64,10 @@ export default class SonkilPlugin extends Plugin {
   async onload() {
     console.log('Sonkil plugin loaded, kill ring initialized');
 
+    this.statusBarManager = new StatusBarManager(this);
+
     this.recenterPlugin = new RecenterCursorPlugin(this);
-    this.killAndYankPlugin = new KillAndYankPlugin(this);
+    this.killAndYankPlugin = new KillAndYankPlugin(this, this.statusBarManager);
     this.multiCursorPlugin = new MultiCursorPlugin(this);
     new SwapPlugin(this);
 
@@ -114,6 +118,13 @@ export default class SonkilPlugin extends Plugin {
         this.handleActiveLeafChange(leaf);
       })
     );
+  }
+
+  async onunload(): Promise<void> {
+    const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (view?.editor) {
+      this.modeQuit(view.editor);
+    }
   }
 
   modeQuit(editor: Editor): void {
