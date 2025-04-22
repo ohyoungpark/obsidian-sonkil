@@ -147,40 +147,28 @@ export class KillAndYankPlugin {
   }
 
   protected killRegion(editor: Editor): void {
-    if (this.markPosition) {
-      const from = this.markPosition;
-      const to = editor.getCursor();
-
-      const [start, end] = this.sortPositions(from, to);
-      const text = editor.getRange(start, end);
-
-      this.killRing.add(text);
-      editor.replaceRange('', start, end);
-      this.resetMarkSelection(editor);
-    } else {
-      const selection = editor.getSelection();
-      if (selection) {
-        this.killRing.add(selection);
-        editor.replaceSelection('');
-      }
-    }
+    this.selectAndAddRegionToKillRing(editor);
+    editor.replaceSelection('');
   }
 
   protected copyRegion(editor: Editor): void {
+    this.selectAndAddRegionToKillRing(editor);
+    const cursor = editor.getCursor();
+    editor.setSelection(cursor, cursor);
+  }
+
+  protected selectAndAddRegionToKillRing(editor: Editor): void {
     if (this.markPosition) {
       const from = this.markPosition;
       const to = editor.getCursor();
 
       const [start, end] = this.sortPositions(from, to);
-      const text = editor.getRange(start, end);
-
-      this.killRing.add(text);
+      editor.setSelection(start, end);
       this.resetMarkSelection(editor);
-    } else {
-      const selection = editor.getSelection();
-      if (selection) {
-        this.killRing.add(selection);
-      }
+    }
+    const selection = editor.getSelection();
+    if (selection) {
+      this.killRing.add(selection);
     }
   }
 
