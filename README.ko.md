@@ -114,6 +114,10 @@ npm run install-dev
 > - `.env` 파일은 Git에 커밋되지 않도록 `.gitignore`에 추가되어 있습니다.
 > - 개발 모드 설치 후에는 Obsidian을 재시작해야 변경사항이 적용됩니다.
 
+## 라이선스
+
+이 프로젝트는 The Unlicense를 사용하여 퍼블릭 도메인으로 공개됩니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+
 ## Translations
 
 - [English](README.md)

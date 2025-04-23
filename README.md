@@ -114,6 +114,10 @@ npm run install-dev
 > - `.env` file is added to `.gitignore` to prevent committing sensitive information
 > - After installing in development mode, you need to restart Obsidian or reload the plugin for changes to take effect
 
+## License
+
+This project is released into the public domain using The Unlicense. See the [LICENSE](LICENSE) file for details.
+
 ## Translations
 
 - [한국어 (Korean)](README.ko.md)
