@@ -3,8 +3,9 @@
   "name": "Sonkil",
   "version": "0.1.0",
   "minAppVersion": "0.15.0",
-  "description": "An Obsidian plugin",
-  "author": "",
+  "description": "Provides Emacs-style text operations like Kill/Yank (Kill Ring), multi-cursor editing, and visual mark selection.",
+  "author": "ohyoungpark",
+  "authorUrl": "https://github.com/ohyoungpark",
   "css": [
     "styles.css"
   ],
