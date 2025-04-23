@@ -92,7 +92,7 @@ export default class SonkilPlugin extends Plugin {
       (evt: KeyboardEvent) => {
         const result: KeyDownEventResult = this.keyController.handleKeyEvent(evt);
         if (result === KeyDownEventResult.RESET_YANK) {
-          this.killAndYankPlugin.resetYank();
+          this.killAndYankPlugin.resetYankSequence();
         }
         if (result === KeyDownEventResult.BLOCK_AND_EXECUTE) {
           evt.preventDefault();

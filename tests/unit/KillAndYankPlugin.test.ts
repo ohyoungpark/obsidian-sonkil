@@ -16,7 +16,7 @@ describe('KillAndYankPlugin', () => {
     let testKillRing: TestKillRing;
 
     function createMockEditor(): Editor {
-        return {
+        const mock = {
             getCursor: jest.fn().mockReturnValue({ line: 0, ch: 0 }),
             getSelection: jest.fn().mockReturnValue(''),
             setSelection: jest.fn(),
@@ -28,7 +28,37 @@ describe('KillAndYankPlugin', () => {
             getLine: jest.fn(),
             getRange: jest.fn(),
             replaceRange: jest.fn(),
+            posToOffset: jest.fn().mockImplementation((pos: EditorPosition) => {
+                let offset = 0;
+                for (let i = 0; i < pos.line; i++) {
+                    offset += (editorContents[i]?.length ?? 0) + 1;
+                }
+                offset += pos.ch;
+                return offset;
+            }),
+            offsetToPos: jest.fn().mockImplementation((offset: number) => {
+                let currentOffset = 0;
+                for (let line = 0; line < editorContents.length; line++) {
+                    const lineLength = editorContents[line]?.length ?? 0;
+                    const lineLengthWithNewline = lineLength + 1;
+                    if (currentOffset + lineLengthWithNewline > offset) {
+                        return { line: line, ch: offset - currentOffset };
+                    }
+                    currentOffset += lineLengthWithNewline;
+                }
+                const lastLine = editorContents.length - 1;
+                return { line: lastLine, ch: editorContents[lastLine]?.length ?? 0 };
+            }),
+            transaction: jest.fn().mockImplementation((tx: { changes?: { from: EditorPosition, to: EditorPosition, text: string }[] }) => {
+                if (tx.changes) {
+                    for (let i = tx.changes.length - 1; i >= 0; i--) {
+                        const change = tx.changes[i];
+                        mock.replaceRange(change.text, change.from, change.to);
+                    }
+                }
+            }),
         } as unknown as Editor;
+        return mock;
     }
 
     beforeEach(() => {
@@ -266,13 +296,19 @@ describe('KillAndYankPlugin', () => {
         command.editorCallback(mockEditor);
 
         // Then: 각 커서 위치의 라인 내용이 삭제되고 kill ring에 추가되어야 함
-        expect(mockEditor.replaceRange).toHaveBeenCalledTimes(3);
-        selections.forEach((selection, index) => {
+        expect(mockEditor.replaceRange).toHaveBeenCalledTimes(selections.length);
+        // Verify calls were made in reverse order of selections due to mock transaction logic
+        selections.forEach((_, index) => {
+            const callIndex = index + 1; // nthCalled is 1-based
+            // The call number corresponds to processing the selections array in reverse
+            const originalSelectionIndex = selections.length - callIndex;
+            const selection = selections[originalSelectionIndex];
+            const lineContent = editorContents[selection.head.line]; // Get the correct line content for this selection
             expect(mockEditor.replaceRange).toHaveBeenNthCalledWith(
-                index + 1,
+                callIndex,
                 '',
                 selection.head,
-                { line: selection.head.line, ch: editorContents[selection.head.line].length }
+                { line: selection.head.line, ch: lineContent?.length ?? 0 } // Use correct line content length
             );
         });
 

@@ -143,10 +143,13 @@ var KillAndYankPlugin = class {
     this.addCommand = addCommand;
     this.statusBarManager = statusBarManager;
     this.markPosition = null;
-    this.yankPositions = [];
+    this.lastYankedLength = null;
     this.clipboard = clipboard;
     this.killRing = new KillRing(clipboard);
     this.registerCommands();
+  }
+  get isYankSequenceActive() {
+    return this.lastYankedLength !== null;
   }
   get markSelectionField() {
     return markSelectionField;
@@ -210,18 +213,21 @@ var KillAndYankPlugin = class {
   killLines(editor) {
     const selections = editor.listSelections();
     const killedTexts = [];
-    selections.forEach((selection) => {
-      const line = editor.getLine(selection.head.line);
-      const text = line.slice(selection.head.ch);
-      killedTexts.push(text);
-      const lastCharPosition = { line: selection.head.line, ch: line.length };
-      editor.replaceRange("", selection.head, lastCharPosition);
+    editor.transaction({
+      changes: selections.map((selection) => {
+        const line = editor.getLine(selection.head.line);
+        const text = line.slice(selection.head.ch);
+        killedTexts.push(text);
+        const from = selection.head;
+        const to = { line: selection.head.line, ch: line.length };
+        return { from, to, text: "" };
+      })
     });
     const combinedText = killedTexts.join("\n");
-    if (combinedText.trim() === "") {
+    if (killedTexts.every((t) => t.trim() === "")) {
       const firstLine = selections[0].head.line;
       const lastLine = selections[selections.length - 1].head.line;
-      const firstCharPosition = { line: firstLine, ch: selections[0].head.ch };
+      const firstCharPosition = { line: firstLine, ch: 0 };
       const lastCharPosition = { line: lastLine + 1, ch: 0 };
       editor.replaceRange("", firstCharPosition, lastCharPosition);
       return;
@@ -251,32 +257,49 @@ var KillAndYankPlugin = class {
     }
   }
   async yank(editor) {
-    this.resetYank();
-    await this.yankPop(editor);
+    this.resetYankSequence();
+    const currentItem = await this.ensureKillRingItem();
+    if (!currentItem)
+      return;
+    this.lastYankedLength = currentItem.length;
+    editor.replaceSelection(currentItem);
   }
   async yankPop(editor) {
-    if (this.killRing.getCurrentItem() === null) {
+    if (!this.isYankSequenceActive) {
+      await this.yank(editor);
+      return;
+    }
+    this.killRing.decreaseCurrentIndex();
+    const currentItem = this.killRing.getCurrentItem();
+    if (currentItem) {
+      const currentSelections = editor.listSelections();
+      const currentHeads = currentSelections.map((sel) => sel.head);
+      for (let i = currentHeads.length - 1; i >= 0; i--) {
+        const headPos = currentHeads[i];
+        const headOffset = editor.posToOffset(headPos);
+        const startOffset = headOffset - this.lastYankedLength;
+        if (startOffset < 0) {
+          this.resetYankSequence();
+          return;
+        }
+        const fromPos = editor.offsetToPos(startOffset);
+        editor.replaceRange(currentItem, fromPos, headPos);
+      }
+      this.lastYankedLength = currentItem.length;
+    } else {
+      this.resetYankSequence();
+    }
+  }
+  async ensureKillRingItem() {
+    let currentItem = this.killRing.getCurrentItem();
+    if (currentItem === null) {
       const clipboardText = await this.clipboard.readText();
       if (clipboardText) {
         this.killRing.add(clipboardText);
+        currentItem = this.killRing.getCurrentItem();
       }
     }
-    const selections = editor.listSelections();
-    const cursorPositions = selections.map((selection) => selection.head);
-    if (!this.yankPositions.length) {
-      this.yankPositions = cursorPositions;
-    } else {
-      this.killRing.decreaseCurrentIndex();
-    }
-    const currentItem = this.killRing.getCurrentItem();
-    if (currentItem) {
-      const selections2 = cursorPositions.map((cursorPos, i) => ({
-        anchor: this.yankPositions[i],
-        head: cursorPos
-      }));
-      editor.setSelections(selections2);
-      editor.replaceSelection(currentItem);
-    }
+    return currentItem;
   }
   setMark(editor) {
     const cursorPosition = editor.getCursor();
@@ -300,11 +323,11 @@ var KillAndYankPlugin = class {
     this.markPosition = cursorPosition;
   }
   reset(editor) {
-    this.resetYank();
+    this.resetYankSequence();
     this.resetMarkSelection(editor);
   }
-  resetYank() {
-    this.yankPositions = [];
+  resetYankSequence() {
+    this.lastYankedLength = null;
   }
   updateMarkSelection(editor, pos) {
     this.statusBarManager.clear();
@@ -324,15 +347,16 @@ var KillAndYankPlugin = class {
     });
   }
   resetMarkSelection(editor) {
-    if (!this.markPosition)
+    if (!this.markPosition && import_view2.Decoration.none)
       return;
     const cm = editor.cm;
-    if (!cm)
-      return;
     this.markPosition = null;
-    cm.dispatch({
-      effects: markSelectionEffect.of({ from: -1, to: -1 })
-    });
+    this.statusBarManager.clear();
+    if (cm) {
+      cm.dispatch({
+        effects: markSelectionEffect.of({ from: -1, to: -1 })
+      });
+    }
   }
 };
 
@@ -606,7 +630,7 @@ var SonkilPlugin = class extends import_obsidian2.Plugin {
       (evt) => {
         const result = this.keyController.handleKeyEvent(evt);
         if (result === "RESET_YANK" /* RESET_YANK */) {
-          this.killAndYankPlugin.resetYank();
+          this.killAndYankPlugin.resetYankSequence();
         }
         if (result === "BLOCK_AND_EXECUTE" /* BLOCK_AND_EXECUTE */) {
           evt.preventDefault();

@@ -40,9 +40,13 @@ export const markSelectionField = StateField.define<DecorationSet>({
 
 export class KillAndYankPlugin {
   protected markPosition: EditorPosition | null = null;
-  protected yankPositions: EditorPosition[] = [];
+  protected lastYankedLength: number | null = null;
   private killRing: KillRing;
   private clipboard: ClipboardInterface;
+
+  get isYankSequenceActive(): boolean {
+    return this.lastYankedLength !== null;
+  }
 
   get markSelectionField() { return markSelectionField; }
 
@@ -124,23 +128,25 @@ export class KillAndYankPlugin {
     const selections = editor.listSelections();
     const killedTexts: string[] = [];
 
-    selections.forEach((selection) => {
-      const line = editor.getLine(selection.head.line);
-      const text = line.slice(selection.head.ch);
-      killedTexts.push(text);
-
-      const lastCharPosition: EditorPosition = { line: selection.head.line, ch: line.length };
-      editor.replaceRange('', selection.head, lastCharPosition);
+    editor.transaction({
+        changes: selections.map(selection => {
+            const line = editor.getLine(selection.head.line);
+            const text = line.slice(selection.head.ch);
+            killedTexts.push(text);
+            const from = selection.head;
+            const to = { line: selection.head.line, ch: line.length };
+            return { from, to, text: '' };
+        })
     });
 
     const combinedText = killedTexts.join('\n');
-    if (combinedText.trim() === '') {
-      const firstLine = selections[0].head.line;
-      const lastLine = selections[selections.length - 1].head.line;
-      const firstCharPosition: EditorPosition = { line: firstLine, ch: selections[0].head.ch };
-      const lastCharPosition: EditorPosition = { line: lastLine + 1, ch: 0 };
-      editor.replaceRange('', firstCharPosition, lastCharPosition);
-      return;
+    if (killedTexts.every(t => t.trim() === '')) {
+        const firstLine = selections[0].head.line;
+        const lastLine = selections[selections.length - 1].head.line;
+        const firstCharPosition: EditorPosition = { line: firstLine, ch: 0 };
+        const lastCharPosition: EditorPosition = { line: lastLine + 1, ch: 0 };
+        editor.replaceRange('', firstCharPosition, lastCharPosition);
+        return;
     }
 
     this.killRing.add(combinedText);
@@ -173,39 +179,61 @@ export class KillAndYankPlugin {
   }
 
   async yank(editor: Editor): Promise<void> {
-    this.resetYank();
-    await this.yankPop(editor);
+    this.resetYankSequence();
+    const currentItem = await this.ensureKillRingItem();
+    if (!currentItem) return;
+
+    this.lastYankedLength = currentItem.length;
+
+    editor.replaceSelection(currentItem);
   }
 
   async yankPop(editor: Editor): Promise<void> {
-    if (this.killRing.getCurrentItem() === null) {
-      const clipboardText = await this.clipboard.readText();
-      if (clipboardText) {
-        this.killRing.add(clipboardText);
-      }
+    if (!this.isYankSequenceActive) {
+      await this.yank(editor);
+      return;
     }
 
-    const selections = editor.listSelections();
-    const cursorPositions = selections.map(selection => selection.head);
-
-    if (!this.yankPositions.length) {
-      this.yankPositions = cursorPositions;
-    } else {
-      this.killRing.decreaseCurrentIndex();
-    }
-
+    this.killRing.decreaseCurrentIndex();
     const currentItem = this.killRing.getCurrentItem();
-    if (currentItem) {
-      // Create selections for all cursors
-      const selections = cursorPositions.map((cursorPos, i) => ({
-        anchor: this.yankPositions[i],
-        head: cursorPos
-      }));
 
-      // Set all selections at once
-      editor.setSelections(selections);
-      editor.replaceSelection(currentItem);
+    if (currentItem) {
+      const currentSelections = editor.listSelections();
+
+      const currentHeads = currentSelections.map(sel => sel.head);
+
+      for (let i = currentHeads.length - 1; i >= 0; i--) {
+          const headPos = currentHeads[i];
+          const headOffset = editor.posToOffset(headPos);
+          const startOffset = headOffset - this.lastYankedLength!;
+
+          if (startOffset < 0) {
+              this.resetYankSequence();
+              return;
+          }
+
+          const fromPos = editor.offsetToPos(startOffset);
+
+          editor.replaceRange(currentItem, fromPos, headPos);
+      }
+
+      this.lastYankedLength = currentItem.length;
+
+    } else {
+        this.resetYankSequence();
     }
+  }
+
+  private async ensureKillRingItem(): Promise<string | null> {
+      let currentItem = this.killRing.getCurrentItem();
+      if (currentItem === null) {
+          const clipboardText = await this.clipboard.readText();
+          if (clipboardText) {
+              this.killRing.add(clipboardText);
+              currentItem = this.killRing.getCurrentItem();
+          }
+      }
+      return currentItem;
   }
 
   protected setMark(editor: Editor): void {
@@ -233,12 +261,12 @@ export class KillAndYankPlugin {
   }
 
   public reset(editor: Editor): void {
-    this.resetYank();
+    this.resetYankSequence();
     this.resetMarkSelection(editor);
   }
 
-  public resetYank(): void {
-    this.yankPositions = [];
+  public resetYankSequence(): void {
+    this.lastYankedLength = null;
   }
 
   public updateMarkSelection(editor: Editor, pos: number): void {
@@ -262,14 +290,17 @@ export class KillAndYankPlugin {
   }
 
   public resetMarkSelection(editor: Editor): void {
-    if (!this.markPosition) return;
+    if (!this.markPosition && Decoration.none) return;
+
     const cm = (editor as unknown as { cm: EditorView }).cm;
-    if (!cm) return;
 
     this.markPosition = null;
+    this.statusBarManager.clear();
 
-    cm.dispatch({
-      effects: markSelectionEffect.of({ from: -1, to: -1 })
-    });
+    if (cm) {
+        cm.dispatch({
+            effects: markSelectionEffect.of({ from: -1, to: -1 })
+        });
+    }
   }
 }
