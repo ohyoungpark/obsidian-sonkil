@@ -41,9 +41,22 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 
 ### For Regular Users
 
-1. Enable "Community Plugins" in Obsidian settings
-2. Disable "Safe Mode"
-3. Install and enable "Sonkil" plugin
+**Method 1: Community Plugins (Recommended)**
+
+1. Enable "Community Plugins" in Obsidian settings.
+2. Disable "Safe Mode".
+3. Search for "Sonkil", install, and enable the plugin.
+
+**Method 2: Manual Installation**
+
+Alternatively, you can install manually:
+
+1.  Go to the [GitHub Releases page](https://github.com/ohyoungpark/obsidian-sonkil/releases) for this repository.
+2.  Download the `main.js`, `manifest.json`, and `styles.css` (if present) files for the desired version.
+3.  Create a new folder named `obsidian-sonkil` inside your Obsidian Vault's plugins folder (`YourVault/.obsidian/plugins/`). (You can find the Vault path in Obsidian's Settings > About tab.)
+4.  Copy the downloaded files into the newly created `obsidian-sonkil` folder.
+5.  Completely quit and restart Obsidian.
+6.  Go to Obsidian Settings > Community Plugins, **ensure Safe Mode is disabled**, and enable the "Sonkil" plugin.
 
 ### For Developers
 

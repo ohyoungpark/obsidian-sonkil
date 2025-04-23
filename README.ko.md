@@ -41,9 +41,22 @@
 
 ### 일반 사용자
 
+**방법 1: 커뮤니티 플러그인 (권장)**
+
 1. Obsidian 설정에서 "커뮤니티 플러그인" 활성화
 2. "안전 모드" 비활성화
-3. "Sonkil" 플러그인 설치 및 활성화
+3. "Sonkil" 플러그인 검색 및 설치, 활성화
+
+**방법 2: 수동 설치**
+
+또는, 다음과 같이 수동으로 설치할 수 있습니다:
+
+1.  이 저장소의 [GitHub Releases 페이지](https://github.com/ohyoungpark/obsidian-sonkil/releases)로 이동합니다.
+2.  설치하려는 버전의 `main.js`, `manifest.json`, `styles.css`(있는 경우) 파일을 다운로드합니다.
+3.  Obsidian Vault의 플러그인 폴더 (`Vault폴더/.obsidian/plugins/`) 안에 `obsidian-sonkil`이라는 새 폴더를 만듭니다. (Vault 폴더 경로는 Obsidian 설정의 '정보' 탭에서 확인할 수 있습니다.)
+4.  다운로드한 파일들을 새로 만든 `obsidian-sonkil` 폴더 안에 복사합니다.
+5.  Obsidian을 완전히 종료했다가 다시 시작합니다.
+6.  Obsidian 설정 > 커뮤니티 플러그인으로 이동하여 **안전 모드가 비활성화되어 있는지 확인**하고 "Sonkil" 플러그인을 활성화합니다.
 
 ### 개발자용
 
