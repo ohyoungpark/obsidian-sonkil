@@ -23,18 +23,18 @@
 
 | 제안 단축키          | 명령어 이름 (Command Name)             | 설명                                                                                               |
 | ---------------------- | -------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `Ctrl+Space`           | `Sonkil: Set mark`                     | 현재 커서 위치에 마크 설정 (Set Mark)                                                              |
+| `Ctrl+Shift+ArrowDown` | `Sonkil: Add cursor down`              | 아랫줄에 커서 추가                                                                               |
+| `Ctrl+Shift+ArrowUp`   | `Sonkil: Add cursor up`                | 윗줄에 커서 추가                                                                                 |
+| `Ctrl+g`               | `Sonkil: Cancel mark and exit yank mode` | 현재 작업 취소 (마크, Yank 모드, 멀티 커서)                                                        |
+| `Alt+w`                | `Sonkil: Copy region`                  | 마크와 현재 커서 사이의 텍스트를 복사하기 (Copy Region)                                            |
 | `Ctrl+k`               | `Sonkil: Kill line`                    | 현재 커서 위치부터 줄 끝까지 텍스트를 잘라내기 (Kill Line)                                         |
 | `Ctrl+w`               | `Sonkil: Kill region`                  | 마크와 현재 커서 사이의 텍스트를 잘라내기 (Kill Region)                                            |
-| `Alt+w`                | `Sonkil: Copy region`                  | 마크와 현재 커서 사이의 텍스트를 복사하기 (Copy Region)                                            |
+| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | 현재 줄을 아래로 이동                                                                            |
+| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | 현재 줄을 위로 이동                                                                              |
+| `Ctrl+l`               | `Sonkil: Recenter editor view`         | 에디터 뷰 리센터링 (중앙/상단/하단 순환)                                                           |
+| `Ctrl+Space`           | `Sonkil: Set mark`                     | 현재 커서 위치에 마크 설정 (Set Mark)                                                              |
 | `Ctrl+y`               | `Sonkil: Yank`                         | Kill ring에서 가장 최근 텍스트 붙여넣기 (Yank, Kill ring이 비어 있으면 시스템 클립보드에서 가져옴) |
 | `Alt+y`                | `Sonkil: Yank pop`                     | Yank 직후에 사용하면 이전에 잘라낸 텍스트로 순환 (Yank Pop)                                        |
-| `Ctrl+l`               | `Sonkil: Recenter editor view`         | 에디터 뷰 리센터링 (중앙/상단/하단 순환)                                                           |
-| `Ctrl+g`               | `Sonkil: Cancel mark and exit yank mode` | 현재 작업 취소 (마크, Yank 모드, 멀티 커서)                                                        |
-| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | 현재 줄을 위로 이동                                                                              |
-| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | 현재 줄을 아래로 이동                                                                            |
-| `Ctrl+Shift+ArrowUp`   | `Sonkil: Add cursor up`                | 윗줄에 커서 추가                                                                                 |
-| `Ctrl+Shift+ArrowDown` | `Sonkil: Add cursor down`              | 아랫줄에 커서 추가                                                                               |
 
 ## 설치 방법
 

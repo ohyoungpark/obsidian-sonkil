@@ -23,18 +23,18 @@ Here are the suggested key combinations based on the original defaults:
 
 | Suggested Keystrokes   | Command Name                           | Description                                                                                       |
 | ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `Ctrl+Space`           | `Sonkil: Set mark`                     | Set mark at current cursor position                                                               |
+| `Ctrl+Shift+ArrowDown` | `Sonkil: Add cursor down`              | Add a cursor on the line below                                                                    |
+| `Ctrl+Shift+ArrowUp`   | `Sonkil: Add cursor up`                | Add a cursor on the line above                                                                    |
+| `Ctrl+g`               | `Sonkil: Cancel mark and exit yank mode` | Cancel current operation (mark, yank mode, multi-cursor)                                          |
+| `Alt+w`                | `Sonkil: Copy region`                  | Copy text between mark and cursor (Copy Region)                                                   |
 | `Ctrl+k`               | `Sonkil: Kill line`                    | Cut text from cursor position to end of line (Kill Line)                                          |
 | `Ctrl+w`               | `Sonkil: Kill region`                  | Cut text between mark and cursor (Kill Region)                                                    |
-| `Alt+w`                | `Sonkil: Copy region`                  | Copy text between mark and cursor (Copy Region)                                                   |
+| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | Move the current line down                                                                        |
+| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | Move the current line up                                                                          |
+| `Ctrl+l`               | `Sonkil: Recenter editor view`         | Recenter editor view (cycles through Center/Top/Bottom)                                           |
+| `Ctrl+Space`           | `Sonkil: Set mark`                     | Set mark at current cursor position                                                               |
 | `Ctrl+y`               | `Sonkil: Yank`                         | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
 | `Alt+y`                | `Sonkil: Yank pop`                     | Cycle through previously cut text after yank (Yank Pop)                                           |
-| `Ctrl+l`               | `Sonkil: Recenter editor view`         | Recenter editor view (cycles through Center/Top/Bottom)                                           |
-| `Ctrl+g`               | `Sonkil: Cancel mark and exit yank mode` | Cancel current operation (mark, yank mode, multi-cursor)                                          |
-| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | Move the current line up                                                                          |
-| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | Move the current line down                                                                        |
-| `Ctrl+Shift+ArrowUp`   | `Sonkil: Add cursor up`                | Add a cursor on the line above                                                                    |
-| `Ctrl+Shift+ArrowDown` | `Sonkil: Add cursor down`              | Add a cursor on the line below                                                                    |
 
 ## Installation
 
