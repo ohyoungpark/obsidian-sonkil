@@ -1,7 +1,7 @@
 import { Editor, EditorPosition } from 'obsidian';
 import { AddCommand } from './types';
 
-export class MultiCursorPlugin {
+export class MultiCursorComponent {
   private mainPosition: EditorPosition | null = null;
 
   constructor(private addCommand: AddCommand) {

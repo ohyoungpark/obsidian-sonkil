@@ -1,4 +1,4 @@
-import { RecenterCursorPlugin } from '../../src/RecenterCursorPlugin';
+import { RecenterCursorComponent } from '../../src/RecenterCursorComponent';
 import { AddCommand } from '../../src/types';
 import { Editor } from 'obsidian';
 import { EditorView } from '@codemirror/view';
@@ -7,17 +7,17 @@ interface EditorWithCM extends Editor {
     cm: EditorView;
 }
 
-describe('RecenterCursorPlugin', () => {
-    let plugin: RecenterCursorPlugin;
+describe('RecenterCursorComponent', () => {
+    let component: RecenterCursorComponent;
     let mockAddCommand: jest.MockedFunction<AddCommand>;
 
     beforeEach(() => {
         mockAddCommand = jest.fn();
-        plugin = new RecenterCursorPlugin(mockAddCommand);
+        component = new RecenterCursorComponent(mockAddCommand);
     });
 
     test('should initialize plugin with correct command', () => {
-        expect(plugin).toBeDefined();
+        expect(component).toBeDefined();
         expect(mockAddCommand).toHaveBeenCalledTimes(1);
 
         const command = mockAddCommand.mock.calls[0][0];
@@ -112,7 +112,7 @@ describe('RecenterCursorPlugin', () => {
         command.editorCallback(mockEditor);
 
         // Reset
-        plugin.reset();
+        component.reset();
 
         // Should be back to 'center'
         command.editorCallback(mockEditor);

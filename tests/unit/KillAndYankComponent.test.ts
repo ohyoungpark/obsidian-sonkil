@@ -1,13 +1,13 @@
-import { KillAndYankPlugin } from '../../src/KillAndYankPlugin';
+import { KillAndYankComponent } from '../../src/KillAndYankComponent';
 import { AddCommand } from '../../src/types';
 import { Editor, EditorPosition } from 'obsidian';
 import { IStatusBarManager } from '../../src/StatusBarManager';
 import { ClipboardInterface } from '../../src/KillRing';
 import { TestKillRing } from './TestKillRing';
-import { MockKillAndYankPlugin } from './__mocks__/KillAndYankPlugin';
+import { MockKillAndYankComponent } from './__mocks__/KillAndYankComponent';
 
-describe('KillAndYankPlugin', () => {
-    let plugin: MockKillAndYankPlugin;
+describe('KillAndYankComponent', () => {
+    let component: MockKillAndYankComponent;
     let mockAddCommand: jest.MockedFunction<AddCommand>;
     let mockEditor: Editor;
     let mockStatusBarManager: IStatusBarManager;
@@ -76,9 +76,9 @@ describe('KillAndYankPlugin', () => {
             readText: jest.fn().mockResolvedValue(''),
         };
         testKillRing = new TestKillRing(mockClipboard);
-        plugin = new MockKillAndYankPlugin(mockAddCommand, mockStatusBarManager, mockClipboard);
-        (plugin as unknown as { killRing: TestKillRing }).killRing = testKillRing;
-        (plugin as unknown as { resetMarkSelection: jest.Mock }).resetMarkSelection = jest.fn();
+        component = new MockKillAndYankComponent(mockAddCommand, mockStatusBarManager, mockClipboard);
+        (component as unknown as { killRing: TestKillRing }).killRing = testKillRing;
+        (component as unknown as { resetMarkSelection: jest.Mock }).resetMarkSelection = jest.fn();
 
         editorContents = [
             'This is a very short line',
@@ -105,7 +105,7 @@ describe('KillAndYankPlugin', () => {
         // Given: 플러그인이 초기화되었을 때
         // When: 명령어들이 등록되면
         // Then: 6개의 명령어가 올바른 ID, 이름, 단축키와 함께 등록되어야 함
-        expect(plugin).toBeDefined();
+        expect(component).toBeDefined();
         expect(mockAddCommand).toHaveBeenCalledTimes(6);
 
         const commands = mockAddCommand.mock.calls;
@@ -172,7 +172,7 @@ describe('KillAndYankPlugin', () => {
         // Then: 선택된 영역이 kill ring에 추가되고 resetMarkSelection이 호출되어야 함
         expect(testKillRing.getItems()).toContain(selectedText);
         expect(mockEditor.replaceSelection).not.toHaveBeenCalled();
-        expect(plugin.resetMarkSelection).toHaveBeenCalled();
+        expect(component.resetMarkSelection).toHaveBeenCalled();
     });
 
     test('should copy region correctly with selection', () => {
@@ -217,8 +217,8 @@ describe('KillAndYankPlugin', () => {
         // Then: 선택된 영역이 삭제되고 kill ring에 추가되어야 함
         expect(testKillRing.getItems()).toContain(selectedText);
         expect(mockEditor.replaceSelection).toHaveBeenCalledWith('');
-        expect(plugin.resetMarkSelection).toHaveBeenCalled();
-        expect(plugin.getMarkPosition()).toEqual(startPosition);
+        expect(component.resetMarkSelection).toHaveBeenCalled();
+        expect(component.getMarkPosition()).toEqual(startPosition);
     });
 
     test('should kill region correctly with selection', () => {
@@ -366,19 +366,19 @@ describe('KillAndYankPlugin', () => {
     describe('setMark', () => {
         it('should set status to MarkActivated when markPosition exists and current status is MarkDeactivated', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition({ line: 0, ch: 0 });
+            component.setMarkPosition({ line: 0, ch: 0 });
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('MarkDeactivated');
 
             const setMarkCommand = mockAddCommand.mock.calls[0][0];
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkActivated');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
 
         it('should set status to MarkSet when markPosition exists and current status is empty', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition({ line: 0, ch: 0 });
+            component.setMarkPosition({ line: 0, ch: 0 });
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('');
             (mockStatusBarManager.isEmpty as jest.Mock).mockReturnValue(true);
 
@@ -386,12 +386,12 @@ describe('KillAndYankPlugin', () => {
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkSet');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
 
         it('should set status to MarkDeactivated when markPosition exists and current status is MarkSet', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition({ line: 0, ch: 0 });
+            component.setMarkPosition({ line: 0, ch: 0 });
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('MarkSet');
             (mockStatusBarManager.isEmpty as jest.Mock).mockReturnValue(false);
 
@@ -399,12 +399,12 @@ describe('KillAndYankPlugin', () => {
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkDeactivated');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
 
         it('should set status to MarkDeactivated when markPosition exists and current status is MarkActivated', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition({ line: 0, ch: 0 });
+            component.setMarkPosition({ line: 0, ch: 0 });
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('MarkActivated');
             (mockStatusBarManager.isEmpty as jest.Mock).mockReturnValue(false);
 
@@ -412,12 +412,12 @@ describe('KillAndYankPlugin', () => {
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkDeactivated');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
 
         it('should set status to MarkSet when markPosition does not exist and current status is empty', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition(null);
+            component.setMarkPosition(null);
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('');
             (mockStatusBarManager.isEmpty as jest.Mock).mockReturnValue(true);
 
@@ -425,12 +425,12 @@ describe('KillAndYankPlugin', () => {
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkSet');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
 
         it('should set status to MarkActivated when markPosition does not exist and current status is not empty', () => {
             const editor = createMockEditor();
-            plugin.setMarkPosition(null);
+            component.setMarkPosition(null);
             (mockStatusBarManager.getStatus as jest.Mock).mockReturnValue('MarkDeactivated');
             (mockStatusBarManager.isEmpty as jest.Mock).mockReturnValue(false);
 
@@ -438,7 +438,7 @@ describe('KillAndYankPlugin', () => {
             setMarkCommand.editorCallback(editor);
 
             expect(mockStatusBarManager.setStatus).toHaveBeenCalledWith('MarkActivated');
-            expect(plugin.getMarkPosition()).toEqual({ line: 0, ch: 0 });
+            expect(component.getMarkPosition()).toEqual({ line: 0, ch: 0 });
         });
     });
 });

@@ -2,7 +2,7 @@ import { Editor } from 'obsidian';
 import { EditorView } from '@codemirror/view';
 import { AddCommand } from './types';
 
-export class RecenterCursorPlugin {
+export class RecenterCursorComponent {
   private modes = ['center', 'start', 'end'] as const;
   private currentIndex = 0;
 

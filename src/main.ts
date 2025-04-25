@@ -5,10 +5,10 @@ import {
   WorkspaceLeaf
 } from 'obsidian';
 
-import { RecenterCursorPlugin } from './RecenterCursorPlugin';
-import { KillAndYankPlugin, markSelectionField } from './KillAndYankPlugin';
-import { MultiCursorPlugin } from './MultiCursorPlugin';
-import { SwapPlugin } from './SwapPlugin';
+import { RecenterCursorComponent } from './RecenterCursorComponent';
+import { KillAndYankComponent, markSelectionField } from './KillAndYankComponent';
+import { MultiCursorComponent } from './MultiCursorComponent';
+import { SwapComponent } from './SwapComponent';
 import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
@@ -17,9 +17,9 @@ import { AddCommand } from './types';
 import { KeyDownEventResult } from './types';
 
 export default class SonkilPlugin extends Plugin {
-  private recenterPlugin!: RecenterCursorPlugin;
-  private killAndYankPlugin!: KillAndYankPlugin;
-  private multiCursorPlugin!: MultiCursorPlugin;
+  private recenterComponent!: RecenterCursorComponent;
+  private killAndYankComponent!: KillAndYankComponent;
+  private multiCursorComponent!: MultiCursorComponent;
   private keyController!: KeyController;
   private statusBarManager: IStatusBarManager;
 
@@ -36,10 +36,10 @@ export default class SonkilPlugin extends Plugin {
         const from = update.startState.selection.main.head;
         const to = update.state.selection.main.head;
         if (update.docChanged && from !== to) {
-          this.killAndYankPlugin.resetMarkSelection(editor);
+          this.killAndYankComponent.resetMarkSelection(editor);
           return;
         }
-        this.killAndYankPlugin.updateMarkSelection(editor, to);
+        this.killAndYankComponent.updateMarkSelection(editor, to);
       }
     });
 
@@ -70,10 +70,10 @@ export default class SonkilPlugin extends Plugin {
 
     const addCommand = this.addCommand.bind(this) as AddCommand;
 
-    this.recenterPlugin = new RecenterCursorPlugin(addCommand);
-    this.killAndYankPlugin = new KillAndYankPlugin(addCommand, this.statusBarManager);
-    this.multiCursorPlugin = new MultiCursorPlugin(addCommand);
-    new SwapPlugin(addCommand);
+    this.recenterComponent = new RecenterCursorComponent(addCommand);
+    this.killAndYankComponent = new KillAndYankComponent(addCommand, this.statusBarManager);
+    this.multiCursorComponent = new MultiCursorComponent(addCommand);
+    new SwapComponent(addCommand);
 
     this.addCommand({
       id: 'sonkil-mode-quit',
@@ -91,7 +91,7 @@ export default class SonkilPlugin extends Plugin {
       (evt: KeyboardEvent) => {
         const result: KeyDownEventResult = this.keyController.handleKeyEvent(evt);
         if (result === KeyDownEventResult.RESET_YANK) {
-          this.killAndYankPlugin.resetYankSequence();
+          this.killAndYankComponent.resetYankSequence();
         }
         if (result === KeyDownEventResult.BLOCK_AND_EXECUTE) {
           evt.preventDefault();
@@ -131,8 +131,8 @@ export default class SonkilPlugin extends Plugin {
   }
 
   modeQuit(editor: Editor): void {
-    this.killAndYankPlugin.reset(editor);
-    this.recenterPlugin.reset();
-    this.multiCursorPlugin.reset(editor);
+    this.killAndYankComponent.reset(editor);
+    this.recenterComponent.reset();
+    this.multiCursorComponent.reset(editor);
   }
 }

@@ -1,8 +1,8 @@
 import { EditorPosition } from 'obsidian';
-import { KillAndYankPlugin } from '../../../src/KillAndYankPlugin';
+import { KillAndYankComponent } from '../../../src/KillAndYankComponent';
 
 
-export class MockKillAndYankPlugin extends KillAndYankPlugin {
+export class MockKillAndYankComponent extends KillAndYankComponent {
   getMarkPosition(): EditorPosition | null {
     return this.markPosition;
   }

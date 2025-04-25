@@ -1,7 +1,7 @@
 import { Editor } from 'obsidian';
 import { AddCommand } from './types';
 
-export class SwapPlugin {
+export class SwapComponent {
   constructor(private addCommand: AddCommand) {
     this.registerCommands();
   }

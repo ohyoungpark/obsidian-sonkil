@@ -38,7 +38,7 @@ export const markSelectionField = StateField.define<DecorationSet>({
   provide: f => Prec.highest(EditorView.decorations.from(f))
 });
 
-export class KillAndYankPlugin {
+export class KillAndYankComponent {
   protected markPosition: EditorPosition | null = null;
   protected lastYankedLength: number | null = null;
   private killRing: KillRing;

@@ -1,15 +1,15 @@
-import { MultiCursorPlugin } from '../../src/MultiCursorPlugin';
+import { MultiCursorComponent } from '../../src/MultiCursorComponent';
 import { AddCommand } from '../../src/types';
 import { Editor, EditorPosition } from 'obsidian';
 
-describe('MultiCursorPlugin', () => {
-    let plugin: MultiCursorPlugin;
+describe('MultiCursorComponent', () => {
+    let component: MultiCursorComponent;
     let mockAddCommand: jest.MockedFunction<AddCommand>;
     let mockEditor: Editor;
 
     beforeEach(() => {
         mockAddCommand = jest.fn();
-        plugin = new MultiCursorPlugin(mockAddCommand);
+        component = new MultiCursorComponent(mockAddCommand);
 
         mockEditor = {
             listSelections: jest.fn().mockReturnValue([]),
@@ -22,7 +22,7 @@ describe('MultiCursorPlugin', () => {
     });
 
     test('should initialize plugin with correct commands', () => {
-        expect(plugin).toBeDefined();
+        expect(component).toBeDefined();
         expect(mockAddCommand).toHaveBeenCalledTimes(2);
 
         const commands = mockAddCommand.mock.calls;
@@ -141,7 +141,7 @@ describe('MultiCursorPlugin', () => {
         command.editorCallback(mockEditor);
 
         // Reset
-        plugin.reset(mockEditor);
+        component.reset(mockEditor);
 
         expect(mockEditor.setCursor).toHaveBeenCalledWith(mockMainPosition);
     });
