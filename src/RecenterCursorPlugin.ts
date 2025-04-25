@@ -35,7 +35,10 @@ export class RecenterCursorPlugin {
   protected recenter(editor: Editor): void {
     // Obsidian's Editor has an internal cm property that's not exposed in the type definitions
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const cmView = (editor as any).cm as EditorView;
+    // REMOVE_LINE const cmView = (editor as any).cm as EditorView;
+    // Accessing the internal CodeMirror EditorView instance
+    const editorWithCm = editor as unknown as { cm: EditorView | undefined };
+    const cmView = editorWithCm.cm;
     if (!cmView) return;
 
     const pos = cmView.state.selection.main.head;

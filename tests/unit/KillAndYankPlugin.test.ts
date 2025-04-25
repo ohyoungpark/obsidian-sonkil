@@ -77,8 +77,8 @@ describe('KillAndYankPlugin', () => {
         };
         testKillRing = new TestKillRing(mockClipboard);
         plugin = new MockKillAndYankPlugin(mockAddCommand, mockStatusBarManager, mockClipboard);
-        (plugin as any).killRing = testKillRing;
-        (plugin as any).resetMarkSelection = jest.fn();
+        (plugin as unknown as { killRing: TestKillRing }).killRing = testKillRing;
+        (plugin as unknown as { resetMarkSelection: jest.Mock }).resetMarkSelection = jest.fn();
 
         editorContents = [
             'This is a very short line',
@@ -163,7 +163,7 @@ describe('KillAndYankPlugin', () => {
         const mockCm = {
             dispatch: jest.fn()
         };
-        (mockEditor as any).cm = mockCm;
+        (mockEditor as unknown as { cm: typeof mockCm }).cm = mockCm;
 
         // When: copy region 명령을 실행하면
         const copyRegionCommand = mockAddCommand.mock.calls[3][0];

@@ -199,7 +199,12 @@ export class KillAndYankPlugin {
       for (let i = currentHeads.length - 1; i >= 0; i--) {
           const headPos = currentHeads[i];
           const headOffset = editor.posToOffset(headPos);
-          const startOffset = headOffset - this.lastYankedLength!;
+          if (this.lastYankedLength === null) {
+              console.error("yankPop called with null lastYankedLength despite active sequence.");
+              this.resetYankSequence();
+              return;
+          }
+          const startOffset = headOffset - this.lastYankedLength;
 
           if (startOffset < 0) {
               this.resetYankSequence();
