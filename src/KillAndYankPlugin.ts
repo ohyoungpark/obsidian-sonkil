@@ -64,7 +64,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-set-mark',
       name: 'Set mark',
-      hotkeys: [{ modifiers: ['Ctrl'], key: ' ' }],
       editorCallback: (editor: Editor) => {
         this.setMark(editor);
       },
@@ -73,7 +72,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-kill-line',
       name: 'Kill line',
-      hotkeys: [{ modifiers: ['Ctrl'], key: 'k' }],
       editorCallback: (editor: Editor) => {
         this.killLines(editor);
       },
@@ -82,7 +80,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-kill-region',
       name: 'Kill region',
-      hotkeys: [{ modifiers: ['Ctrl'], key: 'w' }],
       editorCallback: (editor: Editor) => {
         this.killRegion(editor);
       },
@@ -91,7 +88,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-copy-region',
       name: 'Copy region',
-      hotkeys: [{ modifiers: ['Alt'], key: 'w' }],
       editorCallback: (editor: Editor) => {
         this.copyRegion(editor);
       },
@@ -100,7 +96,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-yank',
       name: 'Yank',
-      hotkeys: [{ modifiers: ['Ctrl'], key: 'y' }],
       editorCallback: (editor: Editor) => {
         this.yank(editor);
       },
@@ -109,7 +104,6 @@ export class KillAndYankPlugin {
     this.addCommand({
       id: 'sonkil-yank-pop',
       name: 'Yank pop',
-      hotkeys: [{ modifiers: ['Alt'], key: 'y' }],
       editorCallback: (editor: Editor) => {
         this.yankPop(editor);
       },

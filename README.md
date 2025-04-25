@@ -15,27 +15,26 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 - **Multi-cursor Yank**: Paste text at multiple cursor positions simultaneously
 - **Status Bar Feedback**: Shows current operation status in the status bar
 
-### Emacs-style Keystrokes
+### Available Commands and Suggested Hotkeys
 
-| Keystrokes | Description                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------- |
-| `C-Space`  | Set mark at current cursor position                                                               |
-| `C-k`      | Cut text from cursor position to end of line (Kill Line)                                          |
-| `C-w`      | Cut text between mark and cursor (Kill Region)                                                    |
-| `M-w`      | Copy text between mark and cursor (Copy Region)                                                   |
-| `C-y`      | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
-| `M-y`      | Cycle through previously cut text after yank (Yank Pop)                                           |
-| `C-l`      | Recenter editor view (cycles through Center/Top/Bottom)                                           |
-| `C-g`      | Cancel current operation (mark, yank mode, multi-cursor)                                          |
+**Important Note:** Default hotkeys have been removed based on Obsidian's plugin guidelines to avoid potential conflicts with existing user configurations and ensure cross-OS compatibility. You can manually configure the hotkeys for Sonkil commands in Obsidian's settings (Settings > Hotkeys).
 
-### Other Keystrokes
+Here are the suggested key combinations based on the original defaults:
 
-| Keystrokes         | Description                    |
-| ------------------ | ------------------------------ |
-| `Ctrl + Alt + ↑`   | Move the current line up       |
-| `Ctrl + Alt + ↓`   | Move the current line down     |
-| `Ctrl + Shift + ↑` | Add a cursor on the line above |
-| `Ctrl + Shift + ↓` | Add a cursor on the line below |
+| Suggested Keystrokes   | Command Name                           | Description                                                                                       |
+| ---------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `Ctrl+Space`           | `Sonkil: Set mark`                     | Set mark at current cursor position                                                               |
+| `Ctrl+k`               | `Sonkil: Kill line`                    | Cut text from cursor position to end of line (Kill Line)                                          |
+| `Ctrl+w`               | `Sonkil: Kill region`                  | Cut text between mark and cursor (Kill Region)                                                    |
+| `Alt+w`                | `Sonkil: Copy region`                  | Copy text between mark and cursor (Copy Region)                                                   |
+| `Ctrl+y`               | `Sonkil: Yank`                         | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
+| `Alt+y`                | `Sonkil: Yank pop`                     | Cycle through previously cut text after yank (Yank Pop)                                           |
+| `Ctrl+l`               | `Sonkil: Recenter editor view`         | Recenter editor view (cycles through Center/Top/Bottom)                                           |
+| `Ctrl+g`               | `Sonkil: Cancel mark and exit yank mode` | Cancel current operation (mark, yank mode, multi-cursor)                                          |
+| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | Move the current line up                                                                          |
+| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | Move the current line down                                                                        |
+| `Ctrl+Shift+ArrowUp`   | `Sonkil: Add cursor up`                | Add a cursor on the line above                                                                    |
+| `Ctrl+Shift+ArrowDown` | `Sonkil: Add cursor down`              | Add a cursor on the line below                                                                    |
 
 ## Installation
 
@@ -57,6 +56,18 @@ Alternatively, you can install manually:
 4.  Copy the downloaded files into the newly created `obsidian-sonkil` folder.
 5.  Completely quit and restart Obsidian.
 6.  Go to Obsidian Settings > Community Plugins, **ensure Safe Mode is disabled**, and enable the "Sonkil" plugin.
+
+### Configuring Hotkeys
+
+Since default hotkeys are not provided due to Obsidian's plugin guidelines, you need to set them manually:
+
+1.  Go to **Settings** (gear icon in the bottom-left corner).
+2.  Navigate to the **Hotkeys** section in the left sidebar.
+3.  In the search bar at the top of the Hotkeys section, type `Sonkil:` to filter the commands provided by this plugin.
+4.  Find the command you want to configure (e.g., `Sonkil: Set mark`).
+5.  Click the `+` icon next to the command name.
+6.  Press the key combination you want to assign (e.g., `Ctrl+Space`). You can use the combinations suggested in the table above or choose your own.
+7.  Repeat steps 4-6 for all the Sonkil commands you wish to use with hotkeys.
 
 ### For Developers
 

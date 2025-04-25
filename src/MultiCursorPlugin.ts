@@ -12,7 +12,6 @@ export class MultiCursorPlugin {
     this.addCommand({
       id: 'sonkil-add-cursor-up',
       name: 'Add cursor up',
-      hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'ArrowUp' }],
       editorCallback: (editor: Editor) => {
         this.addCursor(editor, 'up');
       },
@@ -21,7 +20,6 @@ export class MultiCursorPlugin {
     this.addCommand({
       id: 'sonkil-add-cursor-down',
       name: 'Add cursor down',
-      hotkeys: [{ modifiers: ['Ctrl', 'Shift'], key: 'ArrowDown' }],
       editorCallback: (editor: Editor) => {
         this.addCursor(editor, 'down');
       },

@@ -78,7 +78,6 @@ export default class SonkilPlugin extends Plugin {
     this.addCommand({
       id: 'sonkil-mode-quit',
       name: 'Cancel mark and exit yank mode',
-      hotkeys: [{ modifiers: ['Ctrl'], key: 'g' }],
       editorCallback: (editor: Editor) => {
         this.modeQuit(editor);
       }

@@ -10,7 +10,6 @@ export class SwapPlugin {
     this.addCommand({
       id: 'sonkil-move-line-up',
       name: 'Move line up',
-      hotkeys: [{ modifiers: ['Ctrl', 'Alt'], key: 'ArrowUp' }],
       editorCallback: (editor: Editor) => {
         this.moveLineUp(editor);
       },
@@ -19,7 +18,6 @@ export class SwapPlugin {
     this.addCommand({
       id: 'sonkil-move-line-down',
       name: 'Move line down',
-      hotkeys: [{ modifiers: ['Ctrl', 'Alt'], key: 'ArrowDown' }],
       editorCallback: (editor: Editor) => {
         this.moveLineDown(editor);
       },

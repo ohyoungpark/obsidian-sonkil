@@ -112,27 +112,21 @@ describe('KillAndYankPlugin', () => {
 
         expect(commands[0][0].id).toBe('sonkil-set-mark');
         expect(commands[0][0].name).toBe('Set mark');
-        expect(commands[0][0].hotkeys).toEqual([{ modifiers: ['Ctrl'], key: ' ' }]);
 
         expect(commands[1][0].id).toBe('sonkil-kill-line');
         expect(commands[1][0].name).toBe('Kill line');
-        expect(commands[1][0].hotkeys).toEqual([{ modifiers: ['Ctrl'], key: 'k' }]);
 
         expect(commands[2][0].id).toBe('sonkil-kill-region');
         expect(commands[2][0].name).toBe('Kill region');
-        expect(commands[2][0].hotkeys).toEqual([{ modifiers: ['Ctrl'], key: 'w' }]);
 
         expect(commands[3][0].id).toBe('sonkil-copy-region');
         expect(commands[3][0].name).toBe('Copy region');
-        expect(commands[3][0].hotkeys).toEqual([{ modifiers: ['Alt'], key: 'w' }]);
 
         expect(commands[4][0].id).toBe('sonkil-yank');
         expect(commands[4][0].name).toBe('Yank');
-        expect(commands[4][0].hotkeys).toEqual([{ modifiers: ['Ctrl'], key: 'y' }]);
 
         expect(commands[5][0].id).toBe('sonkil-yank-pop');
         expect(commands[5][0].name).toBe('Yank pop');
-        expect(commands[5][0].hotkeys).toEqual([{ modifiers: ['Alt'], key: 'y' }]);
     });
 
     test('should kill line correctly', () => {

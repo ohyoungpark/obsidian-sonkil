@@ -23,7 +23,6 @@ describe('RecenterCursorPlugin', () => {
         const command = mockAddCommand.mock.calls[0][0];
         expect(command.id).toBe('sonkil-recenter');
         expect(command.name).toBe('Recenter editor view');
-        expect(command.hotkeys).toEqual([{ modifiers: ['Ctrl'], key: 'l' }]);
     });
 
     test('should recenter editor view when command is executed', () => {

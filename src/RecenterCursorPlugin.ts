@@ -14,7 +14,6 @@ export class RecenterCursorPlugin {
     this.addCommand({
       id: 'sonkil-recenter',
       name: 'Recenter editor view',
-      hotkeys: [{ modifiers: ['Ctrl'], key: 'l' }],
       editorCallback: (editor: Editor) => {
         this.recenter(editor);
       },
