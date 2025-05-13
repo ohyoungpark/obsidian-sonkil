@@ -1,7 +1,7 @@
 {
   "id": "sonkil",
   "name": "Sonkil",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "minAppVersion": "0.15.0",
   "description": "Provides Emacs-style text operations like Kill/Yank (Kill Ring), multi-cursor editing, and visual mark selection.",
   "author": "ohyoungpark",

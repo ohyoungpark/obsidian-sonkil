@@ -64,8 +64,6 @@ export default class SonkilPlugin extends Plugin {
   }
 
   async onload() {
-    console.log('Sonkil plugin loaded, kill ring initialized');
-
     this.statusBarManager = new StatusBarManager(this);
 
     const addCommand = this.addCommand.bind(this) as AddCommand;
