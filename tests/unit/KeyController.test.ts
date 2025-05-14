@@ -117,20 +117,4 @@ describe('KeyController', () => {
         expect(result).toBe(KeyDownEventResult.BLOCK_AND_EXECUTE);
         expect(mockApp.commands.executeCommandById).toHaveBeenCalledWith('test-plugin:sonkil-test');
     });
-
-    test('should not handle key event in inline title', () => {
-        mockApp.workspace.setActiveView(mockView);
-        const inlineTitle = document.createElement('div');
-        inlineTitle.classList.add('inline-title');
-
-        const event = new KeyboardEvent('keydown', {
-            key: 'k',
-            code: 'KeyK',
-            ctrlKey: true
-        });
-        Object.defineProperty(event, 'target', { value: inlineTitle });
-
-        const result = keyController.handleKeyEvent(event as any);
-        expect(result).toBe(KeyDownEventResult.DO_NOTHING);
-    });
 });

@@ -72,11 +72,6 @@ export class KeyController {
     const view = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
     if (!view) return KeyDownEventResult.DO_NOTHING;
 
-    const target = evt.target as HTMLElement;
-    if (target.classList.contains('inline-title') || target.closest('.inline-title') !== null) {
-      return KeyDownEventResult.DO_NOTHING;
-    }
-
     if (evt.ctrlKey || evt.altKey || evt.key === 'Escape') {
       for (const binding of this.keyBindings) {
         if (this.isKeyBindingMatch(evt, binding)) {
