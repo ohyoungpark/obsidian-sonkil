@@ -56,3 +56,4 @@ Thumbs.db
 
 # Ignore build files
 main.js
+main.tmp.js
