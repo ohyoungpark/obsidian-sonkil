@@ -6,8 +6,5 @@
   "description": "Provides Emacs-style text operations like Kill/Yank (Kill Ring), multi-cursor editing, and visual mark selection.",
   "author": "ohyoungpark",
   "authorUrl": "https://github.com/ohyoungpark",
-  "css": [
-    "styles.css"
-  ],
   "isDesktopOnly": false
 }
