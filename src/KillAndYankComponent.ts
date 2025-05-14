@@ -26,8 +26,7 @@ export const markSelectionField = StateField.define<DecorationSet>({
         } else {
           value = Decoration.set([
             Decoration.mark({
-              class: 'mark-selection',
-              attributes: { style: 'background-color: rgba(0, 120, 215, 0.2);' }
+              class: 'mark-selection'
             }).range(range.from, range.to)
           ]);
         }
