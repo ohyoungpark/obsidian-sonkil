@@ -8,7 +8,6 @@ import {
 import { RecenterCursorComponent } from './RecenterCursorComponent';
 import { KillAndYankComponent, markSelectionField } from './KillAndYankComponent';
 import { MultiCursorComponent } from './MultiCursorComponent';
-import { SwapComponent } from './SwapComponent';
 import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
@@ -71,7 +70,6 @@ export default class SonkilPlugin extends Plugin {
     this.recenterComponent = new RecenterCursorComponent(addCommand);
     this.killAndYankComponent = new KillAndYankComponent(addCommand, this.statusBarManager);
     this.multiCursorComponent = new MultiCursorComponent(addCommand);
-    new SwapComponent(addCommand);
 
     this.addCommand({
       id: 'mode-quit',

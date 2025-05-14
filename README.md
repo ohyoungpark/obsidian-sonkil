@@ -29,8 +29,6 @@ Here are the suggested key combinations based on the original defaults:
 | `Alt+w`                | `Sonkil: Copy region`                  | Copy text between mark and cursor (Copy Region)                                                   |
 | `Ctrl+k`               | `Sonkil: Kill line`                    | Cut text from cursor position to end of line (Kill Line)                                          |
 | `Ctrl+w`               | `Sonkil: Kill region`                  | Cut text between mark and cursor (Kill Region)                                                    |
-| `Ctrl+Alt+ArrowDown`   | `Sonkil: Move line down`               | Move the current line down                                                                        |
-| `Ctrl+Alt+ArrowUp`     | `Sonkil: Move line up`                 | Move the current line up                                                                          |
 | `Ctrl+l`               | `Sonkil: Recenter editor view`         | Recenter editor view (cycles through Center/Top/Bottom)                                           |
 | `Ctrl+Space`           | `Sonkil: Set mark`                     | Set mark at current cursor position                                                               |
 | `Ctrl+y`               | `Sonkil: Yank`                         | Paste most recent text from kill ring (Yank, imports from system clipboard if kill ring is empty) |
