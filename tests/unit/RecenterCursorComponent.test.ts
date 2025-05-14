@@ -21,7 +21,7 @@ describe('RecenterCursorComponent', () => {
         expect(mockAddCommand).toHaveBeenCalledTimes(1);
 
         const command = mockAddCommand.mock.calls[0][0];
-        expect(command.id).toBe('sonkil-recenter');
+        expect(command.id).toBe('recenter');
         expect(command.name).toBe('Recenter editor view');
     });
 

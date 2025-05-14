@@ -10,7 +10,7 @@ export class MultiCursorComponent {
 
   private registerCommands() {
     this.addCommand({
-      id: 'sonkil-add-cursor-up',
+      id: 'add-cursor-up',
       name: 'Add cursor up',
       editorCallback: (editor: Editor) => {
         this.addCursor(editor, 'up');
@@ -18,7 +18,7 @@ export class MultiCursorComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-add-cursor-down',
+      id: 'add-cursor-down',
       name: 'Add cursor down',
       editorCallback: (editor: Editor) => {
         this.addCursor(editor, 'down');

@@ -74,7 +74,7 @@ export default class SonkilPlugin extends Plugin {
     new SwapComponent(addCommand);
 
     this.addCommand({
-      id: 'sonkil-mode-quit',
+      id: 'mode-quit',
       name: 'Cancel mark and exit yank mode',
       editorCallback: (editor: Editor) => {
         this.modeQuit(editor);

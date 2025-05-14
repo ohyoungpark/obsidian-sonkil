@@ -28,11 +28,11 @@ describe('MultiCursorComponent', () => {
         const commands = mockAddCommand.mock.calls;
 
         // Test add-cursor-up command
-        expect(commands[0][0].id).toBe('sonkil-add-cursor-up');
+        expect(commands[0][0].id).toBe('add-cursor-up');
         expect(commands[0][0].name).toBe('Add cursor up');
 
         // Test add-cursor-down command
-        expect(commands[1][0].id).toBe('sonkil-add-cursor-down');
+        expect(commands[1][0].id).toBe('add-cursor-down');
         expect(commands[1][0].name).toBe('Add cursor down');
     });
 

@@ -8,7 +8,7 @@ export class SwapComponent {
 
   private registerCommands() {
     this.addCommand({
-      id: 'sonkil-move-line-up',
+      id: 'move-line-up',
       name: 'Move line up',
       editorCallback: (editor: Editor) => {
         this.moveLineUp(editor);
@@ -16,7 +16,7 @@ export class SwapComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-move-line-down',
+      id: 'move-line-down',
       name: 'Move line down',
       editorCallback: (editor: Editor) => {
         this.moveLineDown(editor);

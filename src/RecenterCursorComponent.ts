@@ -12,7 +12,7 @@ export class RecenterCursorComponent {
 
   private registerCommands() {
     this.addCommand({
-      id: 'sonkil-recenter',
+      id: 'recenter',
       name: 'Recenter editor view',
       editorCallback: (editor: Editor) => {
         this.recenter(editor);

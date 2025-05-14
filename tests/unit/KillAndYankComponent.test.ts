@@ -1,4 +1,3 @@
-import { KillAndYankComponent } from '../../src/KillAndYankComponent';
 import { AddCommand } from '../../src/types';
 import { Editor, EditorPosition } from 'obsidian';
 import { IStatusBarManager } from '../../src/StatusBarManager';
@@ -110,22 +109,22 @@ describe('KillAndYankComponent', () => {
 
         const commands = mockAddCommand.mock.calls;
 
-        expect(commands[0][0].id).toBe('sonkil-set-mark');
+        expect(commands[0][0].id).toBe('set-mark');
         expect(commands[0][0].name).toBe('Set mark');
 
-        expect(commands[1][0].id).toBe('sonkil-kill-line');
+        expect(commands[1][0].id).toBe('kill-line');
         expect(commands[1][0].name).toBe('Kill line');
 
-        expect(commands[2][0].id).toBe('sonkil-kill-region');
+        expect(commands[2][0].id).toBe('kill-region');
         expect(commands[2][0].name).toBe('Kill region');
 
-        expect(commands[3][0].id).toBe('sonkil-copy-region');
+        expect(commands[3][0].id).toBe('copy-region');
         expect(commands[3][0].name).toBe('Copy region');
 
-        expect(commands[4][0].id).toBe('sonkil-yank');
+        expect(commands[4][0].id).toBe('yank');
         expect(commands[4][0].name).toBe('Yank');
 
-        expect(commands[5][0].id).toBe('sonkil-yank-pop');
+        expect(commands[5][0].id).toBe('yank-pop');
         expect(commands[5][0].name).toBe('Yank pop');
     });
 

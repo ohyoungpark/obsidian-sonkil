@@ -49,27 +49,23 @@ export class KeyController {
 
   private initializeKeyBindings() {
     const commands = (this.plugin.app as unknown as AppWithCommands).commands.commands;
-    const pluginId = this.plugin.manifest.id;
-
-    Object.entries(commands)
-      .filter(([id]) => id.startsWith(`${pluginId}:sonkil-`))
-      .forEach(([id, command]) => {
-        if (command.hotkeys && command.hotkeys.length > 0) {
-          command.hotkeys.forEach((hotkey) => {
-            this.keyBindings.push({
-              key: hotkey.key,
-              modifiers: {
-                ctrlKey: hotkey.modifiers.includes('Ctrl'),
-                altKey: hotkey.modifiers.includes('Alt'),
-                shiftKey: hotkey.modifiers.includes('Shift'),
-                metaKey: hotkey.modifiers.includes('Meta'),
-              },
-              commandId: id,
-              description: command.name,
-            });
+    Object.entries(commands).forEach(([id, command]) => {
+      if (command.hotkeys && command.hotkeys.length > 0) {
+        command.hotkeys.forEach((hotkey) => {
+          this.keyBindings.push({
+            key: hotkey.key,
+            modifiers: {
+              ctrlKey: hotkey.modifiers.includes('Ctrl'),
+              altKey: hotkey.modifiers.includes('Alt'),
+              shiftKey: hotkey.modifiers.includes('Shift'),
+              metaKey: hotkey.modifiers.includes('Meta'),
+            },
+            commandId: id,
+            description: command.name,
           });
-        }
-      });
+        });
+      }
+    });
   }
 
   public handleKeyEvent(evt: KeyboardEvent): KeyDownEventResult {

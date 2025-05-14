@@ -62,7 +62,7 @@ export class KillAndYankComponent {
 
   private registerCommands() {
     this.addCommand({
-      id: 'sonkil-set-mark',
+      id: 'set-mark',
       name: 'Set mark',
       editorCallback: (editor: Editor) => {
         this.setMark(editor);
@@ -70,7 +70,7 @@ export class KillAndYankComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-kill-line',
+      id: 'kill-line',
       name: 'Kill line',
       editorCallback: (editor: Editor) => {
         this.killLines(editor);
@@ -78,7 +78,7 @@ export class KillAndYankComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-kill-region',
+      id: 'kill-region',
       name: 'Kill region',
       editorCallback: (editor: Editor) => {
         this.killRegion(editor);
@@ -86,7 +86,7 @@ export class KillAndYankComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-copy-region',
+      id: 'copy-region',
       name: 'Copy region',
       editorCallback: (editor: Editor) => {
         this.copyRegion(editor);
@@ -94,7 +94,7 @@ export class KillAndYankComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-yank',
+      id: 'yank',
       name: 'Yank',
       editorCallback: (editor: Editor) => {
         this.yank(editor);
@@ -102,7 +102,7 @@ export class KillAndYankComponent {
     });
 
     this.addCommand({
-      id: 'sonkil-yank-pop',
+      id: 'yank-pop',
       name: 'Yank pop',
       editorCallback: (editor: Editor) => {
         this.yankPop(editor);
