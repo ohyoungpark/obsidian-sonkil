@@ -16,9 +16,9 @@ export class StatusBarManager implements IStatusBarManager {
   private currentStatus: StatusType = 'EMPTY';
   private statusTexts: Record<StatusType, string> = {
     EMPTY: '',
-    MarkActivated: 'Mark Activated',
-    MarkDeactivated: 'Mark Deactivated',
-    MarkSet: 'Mark Set',
+    MarkActivated: 'Mark activated',
+    MarkDeactivated: 'Mark deactivated',
+    MarkSet: 'Mark set',
   };
 
   constructor(private plugin: Plugin) {
