@@ -1,6 +1,6 @@
 {
   "name": "obsidian-sonkil",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "An Obsidian plugin",
   "main": "main.js",
   "scripts": {
