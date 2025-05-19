@@ -8,18 +8,15 @@ import {
 import { RecenterCursorComponent } from './RecenterCursorComponent';
 import { KillAndYankComponent, markSelectionField } from './KillAndYankComponent';
 import { MultiCursorComponent } from './MultiCursorComponent';
-import { KeyController } from './KeyController';
 import { EditorView, ViewUpdate } from '@codemirror/view';
 import { StateEffect } from '@codemirror/state';
 import { StatusBarManager, IStatusBarManager } from './StatusBarManager';
 import { AddCommand } from './types';
-import { KeyDownEventResult } from './types';
 
 export default class SonkilPlugin extends Plugin {
   private recenterComponent!: RecenterCursorComponent;
   private killAndYankComponent!: KillAndYankComponent;
   private multiCursorComponent!: MultiCursorComponent;
-  private keyController!: KeyController;
   private statusBarManager: IStatusBarManager;
 
   private setupListener(editor: Editor): void {
@@ -79,19 +76,12 @@ export default class SonkilPlugin extends Plugin {
       }
     });
 
-    this.keyController = new KeyController(this);  // IMPORTANT: this must be initialized after the addCommand is bound
-
     this.registerDomEvent(
       document,
       'keydown',
       (evt: KeyboardEvent) => {
-        const result: KeyDownEventResult = this.keyController.handleKeyEvent(evt);
-        if (result === KeyDownEventResult.RESET_YANK) {
+        if (!['Control', 'Alt'].includes(evt.key)) {
           this.killAndYankComponent.resetYankSequence();
-        }
-        if (result === KeyDownEventResult.BLOCK_AND_EXECUTE) {
-          evt.preventDefault();
-          evt.stopPropagation();
         }
       },
       true

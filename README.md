@@ -7,7 +7,6 @@ This plugin aims to be a gentle assistant that respects your notes and provides 
 
 ### Features
 
-- **Non-English Input Support**: Hotkeys work properly even when using non-English input methods
 - **Kill Ring**: Storage system with 120 entry capacity
 - **Clipboard Sync**: Cut/copied text automatically syncs with system clipboard
 - **Multi-cursor Kill Line**: Cut text from multiple cursor positions and store as a single paragraph
