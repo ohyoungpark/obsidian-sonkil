@@ -39,9 +39,9 @@ Here are the suggested key combinations based on the original defaults:
 
 **Method 1: Community Plugins (Recommended)**
 
-1. Enable "Community Plugins" in Obsidian settings.
-2. Disable "Safe Mode".
-3. Search for "Sonkil", install, and enable the plugin.
+1. Open Settings in Obsidian.
+2. Go to Community plugins and turn off Restricted Mode.
+3. In the same view, a search box appears immediately—type "Sonkil", then click Install and Enable.
 
 **Method 2: Manual Installation**
 

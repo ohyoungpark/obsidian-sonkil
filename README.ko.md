@@ -39,9 +39,9 @@
 
 **방법 1: 커뮤니티 플러그인 (권장)**
 
-1. Obsidian 설정에서 "커뮤니티 플러그인" 활성화
-2. "안전 모드" 비활성화
-3. "Sonkil" 플러그인 검색 및 설치, 활성화
+1. Obsidian의 **설정(Settings)** 을 연다.
+2. Community plugins 항목으로 이동한 후, **Restricted Mode(제한 모드)** 를 비활성화한다.
+3. 같은 화면에 바로 검색창이 나타나며, "Sonkil"을 입력하고 설치(Install) → 활성화(Enable) 한다.
 
 **방법 2: 수동 설치**
 
