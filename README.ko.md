@@ -41,7 +41,7 @@
 
 1. Obsidian의 **설정(Settings)** 을 연다.
 2. Community plugins 항목으로 이동한 후, **Restricted Mode(제한 모드)** 를 비활성화한다.
-3. 같은 화면에 바로 검색창이 나타나며, "Sonkil"을 입력하고 설치(Install) → 활성화(Enable) 한다.
+3. **Browse** 버튼을 클릭하고, 검색창에 "Sonkil"을 입력한 뒤 Install을 클릭하고, 그 다음 Enable을 클릭합니다.
 
 **방법 2: 수동 설치**
 

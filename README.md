@@ -41,7 +41,7 @@ Here are the suggested key combinations based on the original defaults:
 
 1. Open Settings in Obsidian.
 2. Go to Community plugins and turn off Restricted Mode.
-3. In the same view, a search box appears immediately—type "Sonkil", then click Install and Enable.
+3. Click the Browse button, search for “Sonkil”, then click Install, and after that, click Enable.
 
 **Method 2: Manual Installation**
 
